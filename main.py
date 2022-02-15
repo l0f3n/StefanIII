@@ -1,7 +1,7 @@
 """ TODO: Write docstring """
 
 import discord
-from discord import Embed, Color
+from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
 import yt_dlp
 
@@ -34,7 +34,7 @@ async def prefix(ctx, new_prefix):
 async def kom(ctx, arg1="", arg2="", arg3=""):
     """ TODO: Write docstring """
     cm = ctx.invoked_with
-    await ctx.send("cm: " + cm + "\narg1: " + arg1 + "\narg2: " + arg2 + "\narg3: " + arg3)
+   # await ctx.send("cm: " + cm + "\narg1: " + arg1 + "\narg2: " + arg2 + "\narg3: " + arg3)
     if (cm == "kom"
         or (cm == "hit")
         or (cm == "komsi" and arg1 == "komsi")
@@ -108,20 +108,31 @@ async def hjälp(ctx):
     embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")
     await ctx.send(embed=embed)
 
-@bot.command()
-async def play(ctx, playlist_url):
+playlist = []
+
+def download(url):
     """ TODO: Write docstring """
     YDL_OPTIONS = {
         'format': 'bestaudio',
         'extract-audio': True,
         'audio-format ': "opus",
-        '--id': True
+        '--id': True,
+        'outtmpl': "./downloads/%(title)s.%(ext)s"
     }
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        # info = ydl.extract_info(playlist_url, download=False)
-        # video_url = info['entries'][0]['url']
-        source = ydl.download(['https://www.youtube.com/watch?v=BaW_jenozKc'])
-        ctx.voice_client.play(f'{source}.webm')
+        info = ydl.extract_info(url, download=False)
+        title = info.get("title", None).replace("\"", "\'")
+        ydl.download([url])
+        playlist.append(title)
+        print(playlist[0])
+
+@bot.command()
+async def play(ctx, url):
+    """ TODO: Write docstring """
+    download(url)
+    song = "./downloads/" + playlist[0] + ".webm"
+    source = FFmpegOpusAudio(song)
+    ctx.voice_client.play(source, after=None)
 
 
 bot.run(read_token())
