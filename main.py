@@ -129,10 +129,14 @@ def download(url):
 @bot.command()
 async def play(ctx, url):
     """ TODO: Write docstring """
-    download(url)
-    song = "./downloads/" + playlist[0] + ".webm"
-    source = FFmpegOpusAudio(song)
-    ctx.voice_client.play(source, after=None)
+    # The URL to playlists contain the substring 'list'
+    if url.find('list') != -1:
+        pass
+    else:
+        download(url)
+        song = "./downloads/" + playlist[0] + ".webm"
+        source = FFmpegOpusAudio(song)
+        ctx.voice_client.play(source, after=None)
 
 
 bot.run(read_token())
