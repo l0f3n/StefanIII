@@ -1,11 +1,17 @@
+""" TODO: Write docstring """
+
+import discord
 from discord import Embed, Color
 from discord.ext import commands
+import yt_dlp
 
 def read_token():
+    """ TODO: Write docstring """
     with open('token.txt') as f:
         return f.read()
 
 def read_prefix():
+    """ TODO: Write docstring """
     with open('prefix.txt') as f:
         return f.read()
 
@@ -13,10 +19,12 @@ bot = commands.Bot(command_prefix=read_prefix())
 
 @bot.command()
 async def ping(ctx):
+    """ TODO: Write docstring """
     await ctx.message.channel.send("Pong!")
 
 @bot.command(name = "prefix")
 async def prefix(ctx, new_prefix):
+    """ TODO: Write docstring """
     bot.command_prefix = new_prefix
     with open('prefix.txt', "w") as f:
         f.write(new_prefix)
@@ -24,6 +32,7 @@ async def prefix(ctx, new_prefix):
 
 @bot.command(name = "kom", aliases = ["komsi", "älskling", "hit"])
 async def kom(ctx, arg1="", arg2="", arg3=""):
+    """ TODO: Write docstring """
     cm = ctx.invoked_with
     await ctx.send("cm: " + cm + "\narg1: " + arg1 + "\narg2: " + arg2 + "\narg3: " + arg3)
     if (cm == "kom"
@@ -59,6 +68,7 @@ async def kom(ctx, arg1="", arg2="", arg3=""):
 
 @bot.command(name = "stick", aliases = ["schas", "försvinn", "dra", "gå"])
 async def stick(ctx):
+    """ TODO: Write docstring """
     # If bot is in a channel
     if ctx.guild.voice_client:
         # If user is in a channel
@@ -91,10 +101,27 @@ async def stick(ctx):
 
 @bot.command(name = "hjälp", aliases = ["hilfe", "aidez-moi", "h"])
 async def hjälp(ctx):
+    """ TODO: Write docstring """
     embed=Embed(title="Mina kommandon 😎 :", color=Color.orange(), description = f"Genom att skriva \"{bot.command_prefix}\" följt av ett av nedanstående kommandon kan du få mig att göra roliga saker! Lek med mig! 🥰")
     embed.add_field(name="**stick / gå / schas / försvinn / dra**", value="Säg åt mig att lämna röstkanalen. 😥", inline=False)
     embed.add_field(name="**kom / hit / komsi komsi / älskling jag är hemma**", value="Be mig att göra dig sällskap! 😇", inline=False)
     embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")
     await ctx.send(embed=embed)
+
+@bot.command()
+async def play(ctx, playlist_url):
+    """ TODO: Write docstring """
+    YDL_OPTIONS = {
+        'format': 'bestaudio',
+        'extract-audio': True,
+        'audio-format ': "opus",
+        '--id': True
+    }
+    with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+        # info = ydl.extract_info(playlist_url, download=False)
+        # video_url = info['entries'][0]['url']
+        source = ydl.download(['https://www.youtube.com/watch?v=BaW_jenozKc'])
+        ctx.voice_client.play(f'{source}.webm')
+
 
 bot.run(read_token())
