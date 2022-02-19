@@ -25,7 +25,9 @@ class Config:
         self.path = Path(path)
         
         if not self.path.exists():
-            print("Error: No config file exists.")
+            print(f"Creating config file ('{self.path}'). Please fill in missing values.")
+            self.config = {"token": "YOUR-DISCORD-BOT-TOKEN", "prefix": "-"}
+            self.save()
             sys.exit()
 
         with open(self.path, encoding="utf8") as f:

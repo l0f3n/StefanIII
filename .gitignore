@@ -1,5 +1,4 @@
-token.txt
-prefix.txt
+config.json
 downloads/
 playlists.json
 *.pyc
