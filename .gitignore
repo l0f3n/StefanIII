@@ -1,2 +1,6 @@
 token.txt
 prefix.txt
+downloads/
+playlists.json
+*.pyc
+__pycache__/

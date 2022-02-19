@@ -3,7 +3,8 @@
 import discord
 from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
-import player
+import playlist
+from functools import partial
 
 def read_token():
     """ TODO: Write docstring """
@@ -16,7 +17,7 @@ def read_prefix():
         return f.read()
 
 bot = commands.Bot(command_prefix=read_prefix())
-player = player.Player()
+queue = playlist.Queue()
 
 @bot.command()
 async def ping(ctx):
@@ -110,13 +111,52 @@ async def hjälp(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
-async def play(ctx, url):
+async def next(ctx):
     """ TODO: Write docstring """
-    player.queue(ctx, url)
-    player.play(ctx)
+    queue.next()
+
+    if ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+
+    source = FFmpegOpusAudio(queue.get_current_song())
+    # cooked_after_play = partial(after_play, ctx)
+    ctx.voice_client.play(source)
+
+# def after_play(ctx, err):
+#     if err:
+#         print("Error: Unexpected error in after_play:", err)
+#         return
     
-        
+#     queue.next()
+
+#     if not ctx.voice_client.is_playing():
+#         source = FFmpegOpusAudio(queue.get_current_source())
+#         cooked_after_play = partial(after_play, ctx)
+#         ctx.voice_client.play(source, after=cooked_after_play)  
+
+
+@bot.command()
+async def play(ctx, url=None):
+    """ TODO: Write docstring """
+    if url != None:
+        queue.add(url)
+
+    if not ctx.voice_client.is_playing():
+        source = FFmpegOpusAudio(queue.get_current_song())
+        # cooked_after_play = partial(after_play, ctx)
+        ctx.voice_client.play(source)
+
+
+@bot.command()
+async def save(ctx, name):
+    """ TODO: Write docstring """
+    queue.save(name)
+
+
+@bot.command()
+async def load(ctx, name):
+    """ TODO: Write docstring """
+    queue.load(name)
 
 
 bot.run(read_token())
-player.test()
