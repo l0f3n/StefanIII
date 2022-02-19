@@ -1,36 +1,15 @@
 """ TODO: Write docstring """
 
-from pathlib import Path
-import sys
-
 import discord
 from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
 from functools import partial
 
+import config
 import playlist
 
-def read_token():
-    """ TODO: Write docstring """
-    token_path = Path('token.txt')
-    if not token_path.exists():
-        token_path.touch()
-    
-    with open('token.txt') as f:
-        content = f.read()
-
-        if not content:
-            print(f"Please enter your discord bot token into the file: '{token_path}'")
-            sys.exit()
-
-        return content
-
-def read_prefix():
-    """ TODO: Write docstring """
-    with open('prefix.txt') as f:
-        return f.read()
-
-bot = commands.Bot(command_prefix=read_prefix())
+config = config.Config("config.json")
+bot = commands.Bot(command_prefix=config.get("prefix"))
 queue = playlist.Queue()
 
 @bot.event
@@ -46,9 +25,10 @@ async def ping(ctx):
 @bot.command(name = "prefix")
 async def prefix(ctx, new_prefix):
     """ TODO: Write docstring """
+
     bot.command_prefix = new_prefix
-    with open('prefix.txt', "w") as f:
-        f.write(new_prefix)
+    config.set("prefix", new_prefix)
+
     await ctx.message.channel.send("Tack för mitt nya prefix! 🥰")
 
 @bot.command(name = "kom", aliases = ["komsi", "älskling", "hit"])
@@ -186,4 +166,4 @@ async def load(ctx, name):
     queue.load(name)
 
 
-bot.run(read_token())
+bot.run(config.get("token"))
