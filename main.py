@@ -1,15 +1,29 @@
 """ TODO: Write docstring """
 
+from pathlib import Path
+import sys
+
 import discord
 from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
-import playlist
 from functools import partial
+
+import playlist
 
 def read_token():
     """ TODO: Write docstring """
+    token_path = Path('token.txt')
+    if not token_path.exists():
+        token_path.touch()
+    
     with open('token.txt') as f:
-        return f.read()
+        content = f.read()
+
+        if not content:
+            print(f"Please enter your discord bot token into the file: '{token_path}'")
+            sys.exit()
+
+        return content
 
 def read_prefix():
     """ TODO: Write docstring """
