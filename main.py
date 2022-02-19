@@ -3,7 +3,7 @@
 import discord
 from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
-import yt_dlp
+import player
 
 def read_token():
     """ TODO: Write docstring """
@@ -16,6 +16,7 @@ def read_prefix():
         return f.read()
 
 bot = commands.Bot(command_prefix=read_prefix())
+player = player.Player()
 
 @bot.command()
 async def ping(ctx):
@@ -108,35 +109,14 @@ async def hjälp(ctx):
     embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")
     await ctx.send(embed=embed)
 
-playlist = []
-
-def download(url):
-    """ TODO: Write docstring """
-    YDL_OPTIONS = {
-        'format': 'bestaudio',
-        'extract-audio': True,
-        'audio-format ': "opus",
-        '--id': True,
-        'outtmpl': "./downloads/%(title)s.%(ext)s"
-    }
-    with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        info = ydl.extract_info(url, download=False)
-        title = info.get("title", None).replace("\"", "\'")
-        ydl.download([url])
-        playlist.append(title)
-        print(playlist[0])
-
 @bot.command()
 async def play(ctx, url):
     """ TODO: Write docstring """
-    # The URL to playlists contain the substring 'list'
-    if url.find('list') != -1:
-        pass
-    else:
-        download(url)
-        song = "./downloads/" + playlist[0] + ".webm"
-        source = FFmpegOpusAudio(song)
-        ctx.voice_client.play(source, after=None)
+    player.queue(ctx, url)
+    player.play(ctx)
+    
+        
 
 
 bot.run(read_token())
+player.test()
