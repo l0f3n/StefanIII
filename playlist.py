@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from pathlib import Path
 
@@ -40,18 +41,35 @@ class Queue:
 
             return f"./downloads/{title}.webm"
 
-    def save(self, name: str, override: bool = False) -> bool:
+    def get_playlists(self):
+        if not Path(Queue.PLAYLISTS_PATH).exists():
+            print("Error: Can't load playlists, no such file exists")
+            return {}
+
+        with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
+            return [(key, value["description"], value["songs"]) for key, value in json.loads(f.read()).items()]
+
+    def save(self, name: str, desc: str = None) -> bool:
         playlists = {}
         if Path(Queue.PLAYLISTS_PATH).exists():
-            with open(Queue.PLAYLISTS_PATH) as f:
+            with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
                 playlists = json.loads(f.read())
         
-        if not override and name in playlists:
-           print("Error: A playlist with that name already exists")
-           return False
+        if name not in playlists:
+            playlists[name] = {
+                                "created": datetime.now().strftime("%Y-%m-%d %H:%M"), 
+                                "updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                "description": desc if desc else "Ingen beskrivning",
+                                "songs": [], 
+                            }
 
-        playlists[name] = self.playlist
-        with open(Queue.PLAYLISTS_PATH, "w") as f:
+        playlists[name]["updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        playlists[name]["songs"] = self.playlist
+
+        if desc:
+            playlists[name]["description"] = desc
+        
+        with open(Queue.PLAYLISTS_PATH, "w", encoding="utf8") as f:
             f.write(json.dumps(playlists, indent=4))
         
         return True
@@ -61,12 +79,12 @@ class Queue:
             print("Error: Can't load playlists, no such file exists")
             return False
         
-        with open(Queue.PLAYLISTS_PATH) as f:
+        with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
             playlists = json.loads(f.read())
 
         if name not in playlists:
            print("Error: No playlist with that name exists")
            return False
            
-        self.playlist = playlists[name]
+        self.playlist = playlists[name]["songs"]
         return True

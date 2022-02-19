@@ -167,9 +167,17 @@ async def play(ctx, url=None):
 
 
 @bot.command()
-async def save(ctx, name):
+async def playlists(ctx):
+    embed=Embed(title="Spellistor:", color=Color.orange())
+    for name, desc, songs in queue.get_playlists():
+        embed.add_field(name=f"**{name} ({len(songs)} låtar)**", value=f"{desc}", inline=False)
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def save(ctx, name, desc=None):
     """ TODO: Write docstring """
-    queue.save(name)
+    queue.save(name, desc)
 
 
 @bot.command()
