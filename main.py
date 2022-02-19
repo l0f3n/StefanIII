@@ -33,6 +33,11 @@ def read_prefix():
 bot = commands.Bot(command_prefix=read_prefix())
 queue = playlist.Queue()
 
+@bot.event
+async def on_ready():
+    print("Stefan anmäler sig för tjänstgöring.")
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ert skitsnack"))
+
 @bot.command()
 async def ping(ctx):
     """ TODO: Write docstring """
@@ -153,7 +158,7 @@ async def next(ctx):
 async def play(ctx, url=None):
     """ TODO: Write docstring """
     if url != None:
-        queue.add(url)
+        queue.add_song(url)
 
     if not ctx.voice_client.is_playing():
         source = FFmpegOpusAudio(queue.get_current_song())

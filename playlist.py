@@ -11,7 +11,7 @@ class Queue:
         self.playlist = []
         self.current = 0
 
-    def add(self, url: str):
+    def add_song(self, url: str):
         self.playlist.append(url)
 
     def next(self):
