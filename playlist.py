@@ -52,7 +52,7 @@ class Queue:
 
         playlists[name] = self.playlist
         with open(Queue.PLAYLISTS_PATH, "w") as f:
-            f.write(json.dumps(playlists))
+            f.write(json.dumps(playlists, indent=4))
         
         return True
 
