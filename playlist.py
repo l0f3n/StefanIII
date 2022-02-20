@@ -31,6 +31,9 @@ class Queue:
     def next(self):
         self.current = (self.current + 1) % len(self.playlist)
 
+    def get_current_index(self):
+        return self.current + 1
+
     def get_current_song(self):
         if not (0 <= self.current < len(self.playlist)):
             print("Error: Invalid song index")

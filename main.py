@@ -1,9 +1,10 @@
 """ TODO: Write docstring """
 
+import datetime
+
 import discord
 from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
-from functools import partial
 
 import config
 import playlist
@@ -133,7 +134,6 @@ async def next(ctx):
 #         cooked_after_play = partial(after_play, ctx)
 #         ctx.voice_client.play(source, after=cooked_after_play)  
 
-
 @bot.command()
 async def play(ctx, url=None):
     """ TODO: Write docstring """
@@ -154,42 +154,43 @@ async def playlists(ctx):
         embed.add_field(name=f"**{name} ({len(songs)} {noun})**", value=f"{desc}", inline=False)
     await ctx.send(embed=embed)
 
-
 @bot.command()
 async def kö(ctx, name=None):
-    embed=Embed(color=Color.orange())
-    for song in queue.get_queue():
+    description = "```"
+    j = queue.get_current_index()
+    index_len = len(str(len(queue.get_queue())))
+    title_len = min(30, max(len(song['title']) for song in queue.get_queue()))
+    
+    for i, song in enumerate(queue.get_queue(), start=1):
         duration = song['duration']
 
-        hours   = duration // 3600
-        minutes = duration // 60 - hours * 60
-        seconds = duration % 60
+        # Format song index
+        index = str(i) + ':'
 
-        if hours == 0:
-            h_str = ""
-        elif hours == 1:
-            h_str = "1 timma"
+        # Format song title
+        title = song['title']
+        title = title if len(title) < 30 else title[:27] + '...'
+
+        # Format song time
+        time = str(datetime.timedelta(seconds=duration))
+        time = time if len(time) == 8 else '0' + time
+
+        entry = f"{index:<{index_len+1}} {title:<{title_len}} [{time}]"
+
+        if j == i:
+            entry = f"--> {entry} <--"
         else:
-            h_str = f"{hours} timmar"
+            entry = f"    {entry}"
 
-        if minutes == 0:
-            min_str = ""
-        elif minutes == 1:
-            min_str = "1 minut"
-        else:
-            min_str = f"{minutes} minuter"
+        description = description + entry + '\n'
 
-        if seconds == 0:
-            sec_str = ""
-        elif seconds == 1:
-            sec_str = "1 sekund"
-        else:
-            sec_str = f"{seconds} sekunder"
+    description = description + "```"
 
-        string = f"{h_str} {min_str} {sec_str}"
-        string = "0 sekunder" if string == "  " else string 
+    total_time = sum(song['duration'] for song in queue.get_queue())
+    time = str(datetime.timedelta(seconds=total_time))
+    time = time if len(time) == 8 else '0' + time
 
-        embed.add_field(name=f"{song['title']}", value =string, inline=False)
+    embed=Embed(color=Color.orange(), title=f"Nuvarande kö 😙 [{time}]", description=description)
     await ctx.send(embed=embed)
 
 
