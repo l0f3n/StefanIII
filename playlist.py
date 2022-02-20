@@ -13,16 +13,6 @@ class Queue:
         self.current = 0
 
     def add_song(self, url: str):
-        self.playlist.append(url)
-
-    def next(self):
-        self.current = (self.current + 1) % len(self.playlist)
-
-    def get_current_song(self):
-        if not (0 <= self.current < len(self.playlist)):
-            print("Error: Invalid song index")
-            return None
-        
         YDL_OPTIONS = {
             'format': 'bestaudio',
             'extract-audio': True,
@@ -31,15 +21,22 @@ class Queue:
             'outtmpl': "./downloads/%(title)s.%(ext)s"
         }
 
-        url = self.playlist[self.current]
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url)
-            # TODO: Make it stream the song instead of downloading it.
-            # TODO: There is probably a better way to save the file. Either save
-            # it with a much simpler name or get a sanitized file name.
-            title = info.get("title", None).replace("\"", "\'").replace(":", "-")
+            self.playlist.append({"title": info.get("title").replace("\"", "\'").replace(":", "-"), 
+                                  "url": url, 
+                                  "duration": info.get("duration")
+                                  })
 
-            return f"./downloads/{title}.webm"
+    def next(self):
+        self.current = (self.current + 1) % len(self.playlist)
+
+    def get_current_song(self):
+        if not (0 <= self.current < len(self.playlist)):
+            print("Error: Invalid song index")
+            return None
+        else:
+            return f"./downloads/{self.playlist[self.current]['title']}.webm"
 
     def get_playlists(self):
         if not Path(Queue.PLAYLISTS_PATH).exists():
@@ -48,6 +45,10 @@ class Queue:
 
         with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
             return [(key, value["description"], value["songs"]) for key, value in json.loads(f.read()).items()]
+
+    def get_queue(self):
+        return self.playlist
+
 
     def save(self, name: str, desc: str = None) -> bool:
         playlists = {}

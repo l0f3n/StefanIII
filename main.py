@@ -150,7 +150,46 @@ async def play(ctx, url=None):
 async def playlists(ctx):
     embed=Embed(title="Spellistor:", color=Color.orange())
     for name, desc, songs in queue.get_playlists():
-        embed.add_field(name=f"**{name} ({len(songs)} låtar)**", value=f"{desc}", inline=False)
+        noun = "låt" if len(songs) == 1 else "låtar"
+        embed.add_field(name=f"**{name} ({len(songs)} {noun})**", value=f"{desc}", inline=False)
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def kö(ctx, name=None):
+    embed=Embed(color=Color.orange())
+    for song in queue.get_queue():
+        duration = song['duration']
+
+        hours   = duration // 3600
+        minutes = duration // 60 - hours * 60
+        seconds = duration % 60
+
+        if hours == 0:
+            h_str = ""
+        elif hours == 1:
+            h_str = "1 timma"
+        else:
+            h_str = f"{hours} timmar"
+
+        if minutes == 0:
+            min_str = ""
+        elif minutes == 1:
+            min_str = "1 minut"
+        else:
+            min_str = f"{minutes} minuter"
+
+        if seconds == 0:
+            sec_str = ""
+        elif seconds == 1:
+            sec_str = "1 sekund"
+        else:
+            sec_str = f"{seconds} sekunder"
+
+        string = f"{h_str} {min_str} {sec_str}"
+        string = "0 sekunder" if string == "  " else string 
+
+        embed.add_field(name=f"{song['title']}", value =string, inline=False)
     await ctx.send(embed=embed)
 
 
