@@ -12,6 +12,12 @@ class Queue:
         self.playlist = []
         self.current = 0
 
+    def _prepare_index_(self, index):
+        return index+1
+    
+    def _unprepare_index_(self, index):
+        return index-1
+
     def add_song(self, url: str):
         YDL_OPTIONS = {
             'format': 'bestaudio',
@@ -36,23 +42,28 @@ class Queue:
         if self.playlist:
             self.current = (self.current - 1) % len(self.playlist)
 
+    def move(self, index):
+        index = self._unprepare_index_(index)
+        if index < len(self.playlist):
+            self.current = index
+
     def clear(self):
         self.playlist = []
         self.current = 0
 
     def remove(self, index: int):
-        actual_index = index-1
-        if (actual_index) < len(self.playlist):
-            del self.playlist[(actual_index)]
+        index = self._unprepare_index_(index)
+        if (index) < len(self.playlist):
+            del self.playlist[(index)]
         
-        if actual_index < self.current:
+        if index < self.current:
             self.current -= 1
 
     def get_length(self):
         return len(self.playlist)
 
     def get_current_index(self):
-        return self.current + 1
+        return self._prepare_index_(self.current)
 
     def get_current_song(self):
         if not (0 <= self.current < len(self.playlist)):

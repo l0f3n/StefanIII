@@ -204,6 +204,16 @@ async def remove(ctx, index: int):
         global is_playing
         is_playing = False
 
+@bot.command()
+async def move(ctx, index):
+    """ TODO: Write docstring """    
+
+    queue.move(int(index))
+
+    if ctx.voice_client.is_playing():
+        # Simply change audio source
+        ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+
 
 @bot.command()
 async def playlists(ctx):
