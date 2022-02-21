@@ -154,6 +154,8 @@ async def play(ctx, url=None):
         queue.add_song(url)
 
     if not ctx.voice_client.is_playing():
+        queue.move(queue.get_length())
+
         source = FFmpegOpusAudio(queue.get_current_song())
         ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
     
