@@ -29,11 +29,21 @@ class Queue:
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url)
-            self.playlist.append({"title": info.get("title").replace("\"", "\'").replace(":", "-"), 
-                                  "url": url, 
-                                  "duration": info.get("duration")
-                                  })
+            info = ydl.extract_info(url, download=False)
+
+            if 'entries' in info:
+                for entry_info in info['entries']:
+                    self._download_from_info(ydl, entry_info)
+            else:
+                self._download_from_info(ydl, info)
+
+    def _download_from_info(self, ydl, info):
+        url = info['original_url']
+        ydl.download([url])
+        self.playlist.append({"title": info.get("title").replace("\"", "\'").replace(":", "-"), 
+                            "url": url, 
+                            "duration": info.get("duration")
+                            })
 
     def next(self):
         if self.playlist:
