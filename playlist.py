@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime as dt
 import json
 from pathlib import Path
 import random
@@ -73,7 +73,7 @@ class Queue:
         if index < self.current:
             self.current -= 1
 
-    def get_length(self):
+    def num_songs(self):
         return len(self.playlist)
 
     def get_current_index(self):
@@ -97,6 +97,9 @@ class Queue:
     def get_queue(self):
         return self.playlist
 
+    def duration(self):
+        return dt.timedelta(seconds=sum(song["duration"] for song in self.playlist))
+
     def save(self, name: str, desc: str = None) -> bool:
         playlists = {}
         if Path(Queue.PLAYLISTS_PATH).exists():
@@ -105,13 +108,13 @@ class Queue:
         
         if name not in playlists:
             playlists[name] = {
-                                "created": datetime.now().strftime("%Y-%m-%d %H:%M"), 
-                                "updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                "created": dt.datetime.now().strftime("%Y-%m-%d %H:%M"), 
+                                "updated": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
                                 "description": desc if desc else "Ingen beskrivning",
                                 "songs": [], 
                             }
 
-        playlists[name]["updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        playlists[name]["updated"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
         playlists[name]["songs"] = self.playlist
 
         if desc:
@@ -136,3 +139,35 @@ class Queue:
            
         self.playlist = playlists[name]["songs"]
         return True
+
+    def playlist_string(self, title_max_len):
+        index_len = len(str(self.num_songs())) + 1
+        title_len = min(title_max_len, max(len(song['title']) for song in self.playlist))
+
+        entries = []
+
+        for i, song in enumerate(self.playlist, start=1):
+            duration = song['duration']
+
+            # Format song index
+            index = str(i) + ':'
+
+            # Format song title
+            title = song['title']
+            title = title if len(title) < title_max_len else title[:title_max_len-3] + '...'
+
+            # Format song time
+            time = str(dt.timedelta(seconds=duration))
+            time = time if len(time) == 8 else '0' + time
+
+            entry = f"{index:<{index_len+1}} {title:<{title_len}} [{time}]"
+
+            if i == self._prepare_index_(self.current):
+                entry = f"--> {entry} <--"
+            else:
+                entry = f"    {entry}    "
+
+            entries.append(entry)
+        
+        return "```" + '\n'.join(entries) + "```"
+

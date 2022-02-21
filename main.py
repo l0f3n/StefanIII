@@ -1,7 +1,5 @@
 """ TODO: Write docstring """
 
-import datetime
-
 import discord
 from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
@@ -193,7 +191,7 @@ async def remove(ctx, index: int):
 
     queue.remove(index)
 
-    if queue.get_length() > 0:
+    if queue.num_songs() > 0:
 
         if removed_current_song and ctx.voice_client.is_playing():
             # Change audio source
@@ -237,48 +235,16 @@ async def playlists(ctx):
 
 @bot.command()
 async def kö(ctx, name=None):
-    if queue.get_length() == 0:
+    if queue.num_songs() == 0:
         await ctx.send("Inga låtar finns i kön")
         return
-    
-    description = "```"
-    j = queue.get_current_index()
-    index_len = len(str(len(queue.get_queue())))
-    title_max_len = config.get("title_max_length")
-    title_len = min(title_max_len, max(len(song['title']) for song in queue.get_queue()))
 
-    for i, song in enumerate(queue.get_queue(), start=1):
-        duration = song['duration']
+    description = queue.playlist_string(config.get("title_max_length"))
 
-        # Format song index
-        index = str(i) + ':'
-
-        # Format song title
-        title = song['title']
-        title = title if len(title) < title_max_len else title[:title_max_len-3] + '...'
-
-        # Format song time
-        time = str(datetime.timedelta(seconds=duration))
-        time = time if len(time) == 8 else '0' + time
-
-        entry = f"{index:<{index_len+1}} {title:<{title_len}} [{time}]"
-
-        if j == i:
-            entry = f"--> {entry} <--"
-        else:
-            entry = f"    {entry}"
-
-        description = description + entry + '\n'
-
-    description = description + "```"
-
-    total_time = sum(song['duration'] for song in queue.get_queue())
-    time = str(datetime.timedelta(seconds=total_time))
+    time = str(queue.duration())
     time = time if len(time) == 8 else '0' + time
 
-    num_songs = queue.get_length()
-
-    embed=Embed(color=Color.orange(), title=f"Nuvarande kö 😙 {num_songs} låtar [{time}]", description=description)
+    embed=Embed(color=Color.orange(), title=f"Nuvarande kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
     await ctx.send(embed=embed)
 
 
