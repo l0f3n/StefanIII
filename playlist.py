@@ -136,8 +136,10 @@ class Queue:
         if name not in playlists:
            print("Error: No playlist with that name exists")
            return False
-           
-        self.playlist = playlists[name]["songs"]
+        
+        for song in  playlists[name]["songs"]:
+            self.add_song(song["url"])
+        
         return True
 
     def playlist_string(self, title_max_len):

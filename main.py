@@ -115,6 +115,9 @@ def play_next(ctx, e):
     if e:
         print(f"Error: play_next(): {e}")
         return
+
+    if queue.get_current_index() == queue.num_songs() and not config.get("is_looping"):
+        return
     
     if is_playing:
         queue.next()
@@ -128,6 +131,9 @@ def play_next(ctx, e):
 @bot.command()
 async def next(ctx):
     """ TODO: Write docstring """
+    if queue.get_current_index() == queue.num_songs() and not config.get("is_looping"):
+        return
+
     queue.next()
 
     if ctx.voice_client.is_playing():
@@ -138,7 +144,8 @@ async def next(ctx):
 @bot.command()
 async def prev(ctx):
     """ TODO: Write docstring """
-    queue.prev()
+    if not (queue.get_current_index() == 1 and not config.get("is_looping")):
+        queue.prev()
 
     if ctx.voice_client.is_playing():
         # Simply change audio source
@@ -214,7 +221,7 @@ async def move(ctx, index):
         ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
 
 
-@bot.command()
+@bot.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
 async def shuffle(ctx):
     """ TODO: Write docstring """    
 
@@ -223,6 +230,14 @@ async def shuffle(ctx):
     if ctx.voice_client.is_playing():
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+
+
+@bot.command(name="loopa", aliases=["snurra"])
+async def loopa(ctx):
+    """ TODO: Write docstring """    
+
+    config.set("is_looping", not config.get("is_looping"))
+
 
 @bot.command()
 async def playlists(ctx):
@@ -241,10 +256,12 @@ async def kö(ctx, name=None):
 
     description = queue.playlist_string(config.get("title_max_length"))
 
+    looping = "loopande" if config.get("is_looping") else "icke-loopande"
+
     time = str(queue.duration())
     time = time if len(time) == 8 else '0' + time
 
-    embed=Embed(color=Color.orange(), title=f"Nuvarande kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
+    embed=Embed(color=Color.orange(), title=f"Nuvarande {looping} kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
     await ctx.send(embed=embed)
 
 
