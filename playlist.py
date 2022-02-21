@@ -29,7 +29,24 @@ class Queue:
                                   })
 
     def next(self):
-        self.current = (self.current + 1) % len(self.playlist)
+        if self.playlist:
+            self.current = (self.current + 1) % len(self.playlist)
+    
+    def prev(self):
+        if self.playlist:
+            self.current = (self.current - 1) % len(self.playlist)
+
+    def clear(self):
+        self.playlist = []
+        self.current = 0
+
+    def remove(self, index: int):
+        actual_index = index-1
+        if (actual_index) < len(self.playlist):
+            del self.playlist[(actual_index)]
+        
+        if actual_index < self.current:
+            self.current -= 1
 
     def get_length(self):
         return len(self.playlist)

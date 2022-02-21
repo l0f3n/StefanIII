@@ -138,6 +138,16 @@ async def next(ctx):
 
 
 @bot.command()
+async def prev(ctx):
+    """ TODO: Write docstring """
+    queue.prev()
+
+    if ctx.voice_client.is_playing():
+        # Simply change audio source
+        ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+
+
+@bot.command()
 async def play(ctx, url=None):
     """ TODO: Write docstring """    
     if url != None:
@@ -155,6 +165,40 @@ async def play(ctx, url=None):
 async def stop(ctx):
     """ TODO: Write docstring """
     if ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+
+        global is_playing
+        is_playing = False
+
+
+@bot.command()
+async def clear(ctx):
+    """ TODO: Write docstring """    
+
+    if ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+
+        global is_playing
+        is_playing = False
+    
+    queue.clear()
+
+
+@bot.command()
+async def remove(ctx, index: int):
+    """ TODO: Write docstring """    
+
+    removed_current_song = queue.get_current_index() == index
+
+    queue.remove(index)
+
+    if queue.get_length() > 0:
+
+        if removed_current_song and ctx.voice_client.is_playing():
+            # Change audio source
+            ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+    
+    elif ctx.voice_client.is_playing():
         ctx.voice_client.stop()
 
         global is_playing
