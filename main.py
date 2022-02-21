@@ -13,6 +13,8 @@ config = config.Config("config.json")
 bot = commands.Bot(command_prefix=config.get("prefix"))
 queue = playlist.Queue()
 
+is_playing = False
+
 @bot.event
 async def on_ready():
     print("Stefan anmäler sig för tjänstgöring.")
@@ -110,40 +112,53 @@ async def hjälp(ctx):
     embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")
     await ctx.send(embed=embed)
 
+
+def play_next(ctx, e):
+    if e:
+        print(f"Error: play_next(): {e}")
+        return
+    
+    if is_playing:
+        queue.next()
+
+        # We have stopped playing, so we need to call play again after getting the
+        # new source
+        source = FFmpegOpusAudio(queue.get_current_song())
+        ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
+
+
 @bot.command()
 async def next(ctx):
     """ TODO: Write docstring """
     queue.next()
 
     if ctx.voice_client.is_playing():
-        ctx.voice_client.stop()
+        # Simply change audio source
+        ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
 
-    source = FFmpegOpusAudio(queue.get_current_song())
-    # cooked_after_play = partial(after_play, ctx)
-    ctx.voice_client.play(source)
-
-# def after_play(ctx, err):
-#     if err:
-#         print("Error: Unexpected error in after_play:", err)
-#         return
-    
-#     queue.next()
-
-#     if not ctx.voice_client.is_playing():
-#         source = FFmpegOpusAudio(queue.get_current_source())
-#         cooked_after_play = partial(after_play, ctx)
-#         ctx.voice_client.play(source, after=cooked_after_play)  
 
 @bot.command()
 async def play(ctx, url=None):
-    """ TODO: Write docstring """
+    """ TODO: Write docstring """    
     if url != None:
         queue.add_song(url)
 
     if not ctx.voice_client.is_playing():
         source = FFmpegOpusAudio(queue.get_current_song())
-        # cooked_after_play = partial(after_play, ctx)
-        ctx.voice_client.play(source)
+        ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
+    
+        global is_playing
+        is_playing = True
+
+
+@bot.command()
+async def stop(ctx):
+    """ TODO: Write docstring """
+    if ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+
+        global is_playing
+        is_playing = False
 
 
 @bot.command()
@@ -156,6 +171,10 @@ async def playlists(ctx):
 
 @bot.command()
 async def kö(ctx, name=None):
+    if queue.get_length() == 0:
+        await ctx.send("Inga låtar finns i kön")
+        return
+    
     description = "```"
     j = queue.get_current_index()
     index_len = len(str(len(queue.get_queue())))
@@ -190,7 +209,9 @@ async def kö(ctx, name=None):
     time = str(datetime.timedelta(seconds=total_time))
     time = time if len(time) == 8 else '0' + time
 
-    embed=Embed(color=Color.orange(), title=f"Nuvarande kö 😙 [{time}]", description=description)
+    num_songs = queue.get_length()
+
+    embed=Embed(color=Color.orange(), title=f"Nuvarande kö 😙 {num_songs} låtar [{time}]", description=description)
     await ctx.send(embed=embed)
 
 

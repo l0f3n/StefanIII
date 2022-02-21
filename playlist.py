@@ -31,6 +31,9 @@ class Queue:
     def next(self):
         self.current = (self.current + 1) % len(self.playlist)
 
+    def get_length(self):
+        return len(self.playlist)
+
     def get_current_index(self):
         return self.current + 1
 
@@ -51,7 +54,6 @@ class Queue:
 
     def get_queue(self):
         return self.playlist
-
 
     def save(self, name: str, desc: str = None) -> bool:
         playlists = {}
