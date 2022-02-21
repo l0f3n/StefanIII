@@ -245,8 +245,9 @@ async def kö(ctx, name=None):
     description = "```"
     j = queue.get_current_index()
     index_len = len(str(len(queue.get_queue())))
-    title_len = min(30, max(len(song['title']) for song in queue.get_queue()))
-    
+    title_max_len = config.get("title_max_length")
+    title_len = min(title_max_len, max(len(song['title']) for song in queue.get_queue()))
+
     for i, song in enumerate(queue.get_queue(), start=1):
         duration = song['duration']
 
@@ -255,7 +256,7 @@ async def kö(ctx, name=None):
 
         # Format song title
         title = song['title']
-        title = title if len(title) < 30 else title[:27] + '...'
+        title = title if len(title) < title_max_len else title[:title_max_len-3] + '...'
 
         # Format song time
         time = str(datetime.timedelta(seconds=duration))
