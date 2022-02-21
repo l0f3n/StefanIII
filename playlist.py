@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from pathlib import Path
+import random
 
 import yt_dlp
 
@@ -46,6 +47,9 @@ class Queue:
         index = self._unprepare_index_(index)
         if index < len(self.playlist):
             self.current = index
+
+    def shuffle(self):
+        random.shuffle(self.playlist)
 
     def clear(self):
         self.playlist = []

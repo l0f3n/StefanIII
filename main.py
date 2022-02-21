@@ -216,12 +216,23 @@ async def move(ctx, index):
 
 
 @bot.command()
+async def shuffle(ctx):
+    """ TODO: Write docstring """    
+
+    queue.shuffle()
+
+    if ctx.voice_client.is_playing():
+        # Simply change audio source
+        ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+
+@bot.command()
 async def playlists(ctx):
     embed=Embed(title="Spellistor:", color=Color.orange())
     for name, desc, songs in queue.get_playlists():
         noun = "låt" if len(songs) == 1 else "låtar"
         embed.add_field(name=f"**{name} ({len(songs)} {noun})**", value=f"{desc}", inline=False)
     await ctx.send(embed=embed)
+
 
 @bot.command()
 async def kö(ctx, name=None):
