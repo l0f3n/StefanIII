@@ -13,6 +13,14 @@ class Config:
 
     def __init__(self, path: str):
         self.load(path)
+        self._on_update_callbacks = []
+
+    def _notify(self):
+        for callback in self._on_update_callbacks:
+            callback()
+
+    def add_on_update_callback(self, callback):
+        self._on_update_callbacks.append(callback)
     
     def get(self, key: str):
         if key in self.config:
@@ -25,6 +33,7 @@ class Config:
         if key in self.config:
             self.config[key] = value
             self.save()
+            self._notify()
         else:
             print(f"Error: Can't set config with key '{key}': No such config exists.")
     

@@ -12,8 +12,37 @@ class MyBot(commands.Bot):
         commands.Bot.__init__(self, *args, **kwargs)
 
         self.queue = playlist.Queue()
-        self.is_playing = False
+        self.queue.add_on_update_callback(self.handlePlaylistChange)
+        config.add_on_update_callback(self.handlePlaylistChange)
+
+        self._is_playing = False
         self.latest_queue_message = None
+
+    @property
+    def is_playing(self):
+        return self._is_playing
+
+    @is_playing.setter
+    def is_playing(self, value):
+        self._is_playing = value
+        self.handlePlaylistChange()
+
+    def handlePlaylistChange(self):
+        if self.latest_queue_message:
+            asyncio.run_coroutine_threadsafe(bot.latest_queue_message.edit(embed=self.make_queue_embed()), self.loop)
+        
+    def make_queue_embed(self):
+        description = bot.queue.playlist_string(config.get("title_max_length"))
+
+        playing = "spelande" if bot.is_playing else "pausade"
+
+        looping = "loopande" if config.get("is_looping") else "icke-loopande"
+
+        time = str(bot.queue.duration())
+        time = time if len(time) == 8 else '0' + time
+
+        return Embed(color=Color.orange(), title=f"Nuvarande {playing} {looping} kö 😙 {bot.queue.num_songs()} låtar [{time}]", description=description)
+        
 
 bot = MyBot(command_prefix=config.get("prefix"))
 
@@ -115,19 +144,6 @@ async def hjälp(ctx):
     await ctx.send(embed=embed)
 
 
-def make_queue_embed():
-    description = bot.queue.playlist_string(config.get("title_max_length"))
-
-    playing = "spelande" if bot.is_playing else "pausade"
-
-    looping = "loopande" if config.get("is_looping") else "icke-loopande"
-
-    time = str(bot.queue.duration())
-    time = time if len(time) == 8 else '0' + time
-
-    return Embed(color=Color.orange(), title=f"Nuvarande {playing} {looping} kö 😙 {bot.queue.num_songs()} låtar [{time}]", description=description)
-
-
 def play_next(ctx, e):
     if e:
         print(f"Error: play_next(): {e}")
@@ -144,9 +160,6 @@ def play_next(ctx, e):
         source = FFmpegOpusAudio(bot.queue.get_current_song())
         ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
     
-    if bot.latest_queue_message:
-        asyncio.run_coroutine_threadsafe(bot.latest_queue_message.edit(embed=make_queue_embed()), bot.loop)
-
 
 @bot.command()
 async def next(ctx):
@@ -159,9 +172,6 @@ async def next(ctx):
     if ctx.voice_client.is_playing():
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
-    
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -173,9 +183,6 @@ async def prev(ctx):
     if ctx.voice_client.is_playing():
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
-
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -192,9 +199,6 @@ async def play(ctx, url=None):
         ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
     
         bot.is_playing = True
-
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
     
     # await ctx.message.remove_reaction("👌", bot.user)
     # await ctx.message.add_reaction("👍")
@@ -208,9 +212,6 @@ async def stop(ctx):
         ctx.voice_client.stop()
 
         bot.is_playing = False
-    
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -247,8 +248,6 @@ async def remove(ctx, index: int):
 
         bot.is_playing = False
     
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
 
 @bot.command()
 async def move(ctx, index):
@@ -260,8 +259,6 @@ async def move(ctx, index):
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
 
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
@@ -273,9 +270,6 @@ async def shuffle(ctx):
     if ctx.voice_client.is_playing():
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
-    
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command(name="loopa", aliases=["snurra"])
@@ -283,9 +277,6 @@ async def loopa(ctx):
     """ TODO: Write docstring """    
 
     config.set("is_looping", not config.get("is_looping"))
-
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -306,7 +297,7 @@ async def kö(ctx, name=None):
     if bot.latest_queue_message:
         await bot.latest_queue_message.delete()
     
-    bot.latest_queue_message = await ctx.send(embed=make_queue_embed())
+    bot.latest_queue_message = await ctx.send(embed=bot.make_queue_embed())
 
 
 @bot.command()
