@@ -61,3 +61,5 @@ class Config:
     def save(self):
         with open(self.path, "w", encoding="utf8") as f:
             f.write(json.dumps(self.config, indent=4))
+
+config = Config("config.json")
