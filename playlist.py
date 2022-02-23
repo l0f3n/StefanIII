@@ -160,6 +160,9 @@ class Queue:
         return True
 
     def playlist_string(self, title_max_len):
+        if not self.playlist:
+            return ""
+        
         index_len = len(str(self.num_songs())) + 1
         title_len = min(title_max_len, max(len(song['title']) for song in self.playlist))
 

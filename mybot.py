@@ -12,8 +12,8 @@ class MyBot(commands.Bot):
         commands.Bot.__init__(self, *args, **kwargs)
 
         self.queue = playlist.Queue()
-        self.queue.add_on_update_callback(self.handlePlaylistChange)
-        config.add_on_update_callback(self.handlePlaylistChange)
+        self.queue.add_on_update_callback(self._handle_playlist_change)
+        config.add_on_update_callback(self._handle_playlist_change)
 
         self._is_playing = False
         self.latest_queue_message = None
@@ -25,12 +25,36 @@ class MyBot(commands.Bot):
     @is_playing.setter
     def is_playing(self, value):
         self._is_playing = value
-        self.handlePlaylistChange()
+        self._handle_playlist_change()
 
-    def handlePlaylistChange(self):
+    def _handle_playlist_change(self):
         if self.latest_queue_message:
-            asyncio.run_coroutine_threadsafe(bot.latest_queue_message.edit(embed=self.make_queue_embed()), self.loop)
-        
+            asyncio.run_coroutine_threadsafe(bot.latest_queue_message.edit(content=None, embed=self.make_queue_embed()), self.loop)
+    
+    def music_play(self, ctx):       
+        if not ctx.voice_client:
+            print("Error: Cant't play music, bot is not connected to voice")
+            return
+
+        if ctx.voice_client.is_playing():
+            # Just change audio source if we are currently playing something else
+            ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
+        else:
+            # Otherwise start playing as normal
+            source = FFmpegOpusAudio(bot.queue.get_current_song())
+            ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
+
+        bot.is_playing = True
+
+    def music_stop(self, ctx):        
+        if not ctx.voice_client:
+            return
+
+        if ctx.voice_client.is_playing():
+            ctx.voice_client.stop()
+
+        bot.is_playing = False
+
     def make_queue_embed(self):
         description = bot.queue.playlist_string(config.get("title_max_length"))
 
@@ -150,28 +174,21 @@ def play_next(ctx, e):
         return
 
     if bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping"):
-        return
-    
-    if bot.is_playing:
-        bot.queue.next()
+        bot.music_stop(ctx)    
 
-        # We have stopped playing, so we need to call play again after getting the
-        # new source
-        source = FFmpegOpusAudio(bot.queue.get_current_song())
-        ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
+    elif bot.is_playing:
+        bot.queue.next()
+        bot.music_play(ctx)
     
 
 @bot.command()
 async def next(ctx):
     """ TODO: Write docstring """
-    if bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping"):
-        return
-
-    bot.queue.next()
-
-    if ctx.voice_client.is_playing():
-        # Simply change audio source
-        ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
+    if not (bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping")):
+        bot.queue.next()
+        bot.music_play(ctx)
+    else:
+        bot.music_stop(ctx)
 
 
 @bot.command()
@@ -179,10 +196,9 @@ async def prev(ctx):
     """ TODO: Write docstring """
     if not (bot.queue.get_current_index() == 1 and not config.get("is_looping")):
         bot.queue.prev()
-
-    if ctx.voice_client.is_playing():
-        # Simply change audio source
-        ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
+        bot.music_play(ctx)
+    else:
+        bot.music_stop(ctx)
 
 
 @bot.command()
@@ -193,12 +209,7 @@ async def play(ctx, url=None):
     if url != None:
         bot.queue.add_song(url)
 
-    if ctx.voice_client and not ctx.voice_client.is_playing():
-
-        source = FFmpegOpusAudio(bot.queue.get_current_song())
-        ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
-    
-        bot.is_playing = True
+    bot.music_play(ctx)
     
     # await ctx.message.remove_reaction("👌", bot.user)
     # await ctx.message.add_reaction("👍")
@@ -208,25 +219,15 @@ async def play(ctx, url=None):
 @bot.command()
 async def stop(ctx):
     """ TODO: Write docstring """
-    if ctx.voice_client.is_playing():
-        ctx.voice_client.stop()
-
-        bot.is_playing = False
+    bot.music_stop(ctx)
 
 
 @bot.command()
 async def clear(ctx):
     """ TODO: Write docstring """    
 
-    if ctx.voice_client.is_playing():
-        ctx.voice_client.stop()
-
-        bot.is_playing = False
-    
+    bot.music_stop(ctx)
     bot.queue.clear()
-
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.edit(content="Inga låtar i kön", embed=None)
 
 
 @bot.command()
@@ -239,14 +240,11 @@ async def remove(ctx, index: int):
 
     if bot.queue.num_songs() > 0:
 
-        if removed_current_song and ctx.voice_client.is_playing():
-            # Change audio source
-            ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
-    
-    elif ctx.voice_client.is_playing():
-        ctx.voice_client.stop()
+        if removed_current_song:
+            bot.music_play(ctx)
 
-        bot.is_playing = False
+    else:
+        bot.music_stop(ctx)
     
 
 @bot.command()
@@ -254,11 +252,7 @@ async def move(ctx, index):
     """ TODO: Write docstring """    
 
     bot.queue.move(int(index))
-
-    if ctx.voice_client.is_playing():
-        # Simply change audio source
-        ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
-
+    bot.music_play(ctx)
 
 
 @bot.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
@@ -266,10 +260,7 @@ async def shuffle(ctx):
     """ TODO: Write docstring """    
 
     bot.queue.shuffle()
-
-    if ctx.voice_client.is_playing():
-        # Simply change audio source
-        ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
+    bot.music_play(ctx)
 
 
 @bot.command(name="loopa", aliases=["snurra"])
@@ -290,9 +281,6 @@ async def playlists(ctx):
 
 @bot.command()
 async def kö(ctx, name=None):
-    if bot.queue.num_songs() == 0:
-        await ctx.send("Inga låtar finns i kön")
-        return
     
     if bot.latest_queue_message:
         await bot.latest_queue_message.delete()
