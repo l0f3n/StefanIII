@@ -1,5 +1,6 @@
 """ TODO: Write docstring """
 
+import asyncio
 import discord
 from discord import Embed, Color, FFmpegOpusAudio
 from discord.ext import commands
@@ -12,11 +13,15 @@ bot = commands.Bot(command_prefix=config.get("prefix"))
 queue = playlist.Queue()
 
 is_playing = False
+latest_queue_message = None
+loop = None
 
 @bot.event
 async def on_ready():
     print("Stefan anmäler sig för tjänstgöring.")
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ert skitsnack"))
+    global loop
+    loop = asyncio.get_running_loop()
 
 @bot.command()
 async def ping(ctx):
@@ -111,6 +116,17 @@ async def hjälp(ctx):
     await ctx.send(embed=embed)
 
 
+def make_queue_embed():
+    description = queue.playlist_string(config.get("title_max_length"))
+
+    looping = "loopande" if config.get("is_looping") else "icke-loopande"
+
+    time = str(queue.duration())
+    time = time if len(time) == 8 else '0' + time
+
+    return Embed(color=Color.orange(), title=f"Nuvarande {looping} kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
+
+
 def play_next(ctx, e):
     if e:
         print(f"Error: play_next(): {e}")
@@ -126,6 +142,10 @@ def play_next(ctx, e):
         # new source
         source = FFmpegOpusAudio(queue.get_current_song())
         ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
+    
+    global latest_queue_message
+    if latest_queue_message:
+        asyncio.run_coroutine_threadsafe(latest_queue_message.edit(embed=make_queue_embed()), loop)
 
 
 @bot.command()
@@ -139,6 +159,10 @@ async def next(ctx):
     if ctx.voice_client.is_playing():
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+    
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -150,6 +174,10 @@ async def prev(ctx):
     if ctx.voice_client.is_playing():
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -166,6 +194,10 @@ async def play(ctx, url=None):
         global is_playing
         is_playing = True
 
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
+
 
 @bot.command()
 async def stop(ctx):
@@ -175,6 +207,10 @@ async def stop(ctx):
 
         global is_playing
         is_playing = False
+    
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -188,6 +224,10 @@ async def clear(ctx):
         is_playing = False
     
     queue.clear()
+
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(content="Inga låtar i kön", embed=None)
 
 
 @bot.command()
@@ -209,6 +249,10 @@ async def remove(ctx, index: int):
 
         global is_playing
         is_playing = False
+    
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
 
 @bot.command()
 async def move(ctx, index):
@@ -220,6 +264,10 @@ async def move(ctx, index):
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
 
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
+
 
 @bot.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
 async def shuffle(ctx):
@@ -230,6 +278,10 @@ async def shuffle(ctx):
     if ctx.voice_client.is_playing():
         # Simply change audio source
         ctx.voice_client.source = FFmpegOpusAudio(queue.get_current_song())
+    
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command(name="loopa", aliases=["snurra"])
@@ -237,6 +289,10 @@ async def loopa(ctx):
     """ TODO: Write docstring """    
 
     config.set("is_looping", not config.get("is_looping"))
+
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.edit(embed=make_queue_embed())
 
 
 @bot.command()
@@ -253,16 +309,12 @@ async def kö(ctx, name=None):
     if queue.num_songs() == 0:
         await ctx.send("Inga låtar finns i kön")
         return
-
-    description = queue.playlist_string(config.get("title_max_length"))
-
-    looping = "loopande" if config.get("is_looping") else "icke-loopande"
-
-    time = str(queue.duration())
-    time = time if len(time) == 8 else '0' + time
-
-    embed=Embed(color=Color.orange(), title=f"Nuvarande {looping} kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
-    await ctx.send(embed=embed)
+    
+    global latest_queue_message
+    if latest_queue_message:
+        await latest_queue_message.delete()
+    
+    latest_queue_message = await ctx.send(embed=make_queue_embed())
 
 
 @bot.command()
