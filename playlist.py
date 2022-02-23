@@ -162,7 +162,7 @@ class Queue:
             time = str(dt.timedelta(seconds=duration))
             time = time if len(time) == 8 else '0' + time
 
-            entry = f"{index:<{index_len+1}} {title:<{title_len}} [{time}]"
+            entry = f"{index:<{index_len}} {title:<{title_len}} [{time}]"
 
             if i == self._prepare_index_(self.current):
                 entry = f"--> {entry} <--"
