@@ -119,12 +119,14 @@ async def hjälp(ctx):
 def make_queue_embed():
     description = queue.playlist_string(config.get("title_max_length"))
 
+    playing = "spelande" if is_playing else "pausade"
+
     looping = "loopande" if config.get("is_looping") else "icke-loopande"
 
     time = str(queue.duration())
     time = time if len(time) == 8 else '0' + time
 
-    return Embed(color=Color.orange(), title=f"Nuvarande {looping} kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
+    return Embed(color=Color.orange(), title=f"Nuvarande {playing} {looping} kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
 
 
 def play_next(ctx, e):
