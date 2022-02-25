@@ -155,6 +155,8 @@ class Queue:
            return False
         
         self.playlist = playlists[name]['songs']
+
+        self._notify()
         
         return True
 
