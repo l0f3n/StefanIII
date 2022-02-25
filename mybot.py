@@ -1,13 +1,18 @@
 
 import asyncio
 import discord
-from discord import Embed, Color, FFmpegOpusAudio
+from discord import Embed, Color, FFmpegPCMAudio
 from discord.ext import commands
 
 from config import config
 import playlist
 
 class MyBot(commands.Bot):
+    _FFMPEG_OPTIONS = {
+        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
+        'options': '-vn'
+    }
+    
     def __init__(self, *args, **kwargs):
         commands.Bot.__init__(self, *args, **kwargs)
 
@@ -38,10 +43,10 @@ class MyBot(commands.Bot):
 
         if ctx.voice_client.is_playing():
             # Just change audio source if we are currently playing something else
-            ctx.voice_client.source = FFmpegOpusAudio(bot.queue.get_current_song())
+            ctx.voice_client.source = FFmpegPCMAudio(bot.queue.current_song_source(), **MyBot._FFMPEG_OPTIONS)
         else:
             # Otherwise start playing as normal
-            source = FFmpegOpusAudio(bot.queue.get_current_song())
+            source = FFmpegPCMAudio(bot.queue.current_song_source(), **MyBot._FFMPEG_OPTIONS)
             ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
 
         bot.is_playing = True
@@ -211,7 +216,7 @@ async def play(ctx, url=None):
     # await ctx.message.add_reaction("👌")
     
     if url != None:
-        bot.queue.add_song(url)
+        bot.queue.add_song_from_url(url)
 
     bot.music_play(ctx)
     

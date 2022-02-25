@@ -9,6 +9,14 @@ class Queue:
 
     PLAYLISTS_PATH = "playlists.json"
 
+    YDL_OPTIONS = {
+            'format': 'bestaudio',
+            'extract-audio': True,
+            'audio-format ': "opus",
+            '--id': True,
+            'outtmpl': "./downloads/%(title)s.%(ext)s"
+        }
+
     def __init__(self) -> None:
         self.playlist = []
         self.current = 0
@@ -27,33 +35,27 @@ class Queue:
     def add_on_update_callback(self, callback):
         self._on_update_callbacks.append(callback)
 
-    def add_song(self, url: str):
-        YDL_OPTIONS = {
-            'format': 'bestaudio',
-            'extract-audio': True,
-            'audio-format ': "opus",
-            '--id': True,
-            'outtmpl': "./downloads/%(title)s.%(ext)s"
-        }
+    def add_song_from_url(self, url: str):
 
-        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+        with yt_dlp.YoutubeDL(Queue.YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
 
             if 'entries' in info:
                 for entry_info in info['entries']:
-                    self._download_from_info(ydl, entry_info)
+                    self._add_song_from_info(entry_info)
             else:
-                self._download_from_info(ydl, info)
+                self._add_song_from_info(info)
         
         self._notify()
 
-    def _download_from_info(self, ydl, info):
-        url = info['original_url']
-        ydl.download([url])
-        self.playlist.append({"title": info.get("title").replace("\"", "\'").replace(":", "-"), 
-                            "url": url, 
-                            "duration": info.get("duration")
-                            })
+    def _add_song_from_info(self, info):
+
+        self.playlist.append({  
+            "title": info.get("title").replace("\"", "\'").replace(":", "-"), 
+            "url": info.get('original_url'), 
+            "source": info.get('url'), 
+            "duration": info.get("duration")
+        })
 
     def next(self):
         if self.playlist:
@@ -96,12 +98,10 @@ class Queue:
     def get_current_index(self):
         return self._prepare_index_(self.current)
 
-    def get_current_song(self):
-        if not (0 <= self.current < len(self.playlist)):
-            print("Error: Invalid song index")
-            return None
-        else:
-            return f"./downloads/{self.playlist[self.current]['title']}.webm"
+    def current_song_source(self):
+        assert 0 <= self.current < len(self.playlist), "Invalid song index"
+
+        return self.playlist[self.current]['source']
 
     def get_playlists(self):
         if not Path(Queue.PLAYLISTS_PATH).exists():
@@ -154,8 +154,10 @@ class Queue:
            print("Error: No playlist with that name exists")
            return False
         
-        for song in  playlists[name]["songs"]:
-            self.add_song(song["url"])
+        self.playlist = playlists[name]
+
+        # for song in playlists[name]["songs"]:
+        #     self.add_song_from_url(song["url"])
         
         return True
 
