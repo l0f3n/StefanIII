@@ -12,12 +12,20 @@ class Queue:
     def __init__(self) -> None:
         self.playlist = []
         self.current = 0
+        self._on_update_callbacks = []
 
     def _prepare_index_(self, index):
         return index+1
     
     def _unprepare_index_(self, index):
         return index-1
+
+    def _notify(self):
+        for callback in self._on_update_callbacks:
+            callback()
+
+    def add_on_update_callback(self, callback):
+        self._on_update_callbacks.append(callback)
 
     def add_song(self, url: str):
         YDL_OPTIONS = {
@@ -36,6 +44,8 @@ class Queue:
                     self._download_from_info(ydl, entry_info)
             else:
                 self._download_from_info(ydl, info)
+        
+        self._notify()
 
     def _download_from_info(self, ydl, info):
         url = info['original_url']
@@ -48,22 +58,27 @@ class Queue:
     def next(self):
         if self.playlist:
             self.current = (self.current + 1) % len(self.playlist)
+        self._notify()
     
     def prev(self):
         if self.playlist:
             self.current = (self.current - 1) % len(self.playlist)
+        self._notify()
 
     def move(self, index):
         index = self._unprepare_index_(index)
         if index < len(self.playlist):
             self.current = index
+        self._notify()
 
     def shuffle(self):
         random.shuffle(self.playlist)
+        self._notify()
 
     def clear(self):
         self.playlist = []
         self.current = 0
+        self._notify()
 
     def remove(self, index: int):
         index = self._unprepare_index_(index)
@@ -72,6 +87,8 @@ class Queue:
         
         if index < self.current:
             self.current -= 1
+
+        self._notify()
 
     def num_songs(self):
         return len(self.playlist)
@@ -143,6 +160,9 @@ class Queue:
         return True
 
     def playlist_string(self, title_max_len):
+        if not self.playlist:
+            return ""
+        
         index_len = len(str(self.num_songs())) + 1
         title_len = min(title_max_len, max(len(song['title']) for song in self.playlist))
 
@@ -162,7 +182,7 @@ class Queue:
             time = str(dt.timedelta(seconds=duration))
             time = time if len(time) == 8 else '0' + time
 
-            entry = f"{index:<{index_len+1}} {title:<{title_len}} [{time}]"
+            entry = f"{index:<{index_len}} {title:<{title_len}} [{time}]"
 
             if i == self._prepare_index_(self.current):
                 entry = f"--> {entry} <--"
