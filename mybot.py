@@ -214,11 +214,14 @@ async def prev(ctx):
 async def play(ctx, url=None):
     """ TODO: Write docstring """    
     # await ctx.message.add_reaction("👌")
-    
+
+    was_empty_before = bot.queue.num_songs() == 0
+
     if url != None:
         bot.queue.add_song_from_url(url)
 
-    bot.music_play(ctx)
+    if was_empty_before or not url:
+        bot.music_play(ctx)
     
     # await ctx.message.remove_reaction("👌", bot.user)
     # await ctx.message.add_reaction("👍")
@@ -306,4 +309,10 @@ async def save(ctx, name, desc=None):
 @bot.command()
 async def load(ctx, name):
     """ TODO: Write docstring """
+    
+    was_empty_before = bot.queue.num_songs() == 0
+
     bot.queue.load(name)
+
+    if was_empty_before or not bot.is_playing:
+        bot.music_play(ctx)
