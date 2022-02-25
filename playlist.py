@@ -154,7 +154,7 @@ class Queue:
            print("Error: No playlist with that name exists")
            return False
         
-        self.playlist = playlists[name]['songs']
+        self.playlist.extend(playlists[name]['songs'])
 
         self._notify()
         
