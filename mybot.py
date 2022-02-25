@@ -61,7 +61,7 @@ class MyBot(commands.Bot):
         bot.is_playing = False
 
     def make_queue_embed(self):
-        description = self.queue.playlist_string(config.get("title_max_length"))
+        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"))
 
         looping = "✓" if config.get("is_looping") else "✗"
 

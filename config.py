@@ -8,7 +8,9 @@ class Config:
         "token": "YOUR-DISCORD-BOT-TOKEN", 
         "prefix": "-",
         "title_max_length": 30,
-        "is_looping": True
+        "is_looping": True,
+        "before_current": 10,
+        "after_current": 20,
     }
 
     def __init__(self, path: str):

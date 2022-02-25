@@ -160,16 +160,29 @@ class Queue:
         
         return True
 
-    def playlist_string(self, title_max_len):
+    def playlist_string(self, title_max_len, before_current, after_current):
         if not self.playlist:
             return ""
-        
-        index_len = len(str(self.num_songs())) + 1
+
+        assert before_current + after_current <= 60, "Can't display more than about 60 songs at once"
+
+        # Calculate start and end index to only show before_current # of songs
+        # before current and after_current # of songs after current. Always 
+        # show (before_current + after_current) number of songs if more than 
+        # that are in the playlist.
+
+        extra_start = max(0, (self.current+after_current)-len(self.playlist))
+        start = max(0, (self.current-before_current)-extra_start)
+
+        extra_end = max(0, -(self.current-before_current))
+        end = min(len(self.playlist), (self.current+after_current)+extra_end)
+
+        index_len = len(str(end)) + 1
         title_len = min(title_max_len, max(len(song['title']) for song in self.playlist))
 
         entries = []
 
-        for i, song in enumerate(self.playlist, start=1):
+        for i, song in enumerate(self.playlist[start:end], start=self._prepare_index_(start)):
             duration = song['duration']
 
             # Format song index
