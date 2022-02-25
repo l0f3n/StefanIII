@@ -154,10 +154,7 @@ class Queue:
            print("Error: No playlist with that name exists")
            return False
         
-        self.playlist = playlists[name]
-
-        # for song in playlists[name]["songs"]:
-        #     self.add_song_from_url(song["url"])
+        self.playlist = playlists[name]['songs']
         
         return True
 
