@@ -256,12 +256,14 @@ async def kö(ctx, name=None):
 
     description = queue.playlist_string(config.get("title_max_length"))
 
-    looping = "loopande" if config.get("is_looping") else "icke-loopande"
+    looping = "✓" if config.get("is_looping") else "✗"
 
     time = str(queue.duration())
     time = time if len(time) == 8 else '0' + time
 
-    embed=Embed(color=Color.orange(), title=f"Nuvarande {looping} kö 😙 {queue.num_songs()} låtar [{time}]", description=description)
+    song_num = queue.num_songs()
+
+    embed=Embed(color=Color.orange(), title=f"Nuvarande kö 😙", description=description)
     await ctx.send(embed=embed)
 
 
