@@ -241,8 +241,9 @@ async def play(ctx, *args):
 
     # Move bot to users channel
     if ctx.author.voice:
-        if ctx.guild.voice_client and ctx.author.voice.channel != ctx.guild.voice_client.channel:
-            await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
+        if ctx.guild.voice_client:
+            if ctx.author.voice.channel != ctx.guild.voice_client.channel:
+                await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
         else:
             await ctx.author.voice.channel.connect()
 
