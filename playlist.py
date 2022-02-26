@@ -35,7 +35,7 @@ class Queue:
     def add_on_update_callback(self, callback):
         self._on_update_callbacks.append(callback)
 
-    def add_song_from_url(self, url: str):
+    def add_song_from_url(self, url: str, notify=True):
 
         with yt_dlp.YoutubeDL(Queue.YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -46,7 +46,8 @@ class Queue:
             else:
                 self._add_song_from_info(info)
         
-        self._notify()
+        if notify:
+            self._notify()
 
     def _add_song_from_info(self, info):
 
@@ -154,8 +155,24 @@ class Queue:
            print("Error: No playlist with that name exists")
            return False
         
-        self.playlist.extend(playlists[name]['songs'])
+        # The source link gotten from youtube-dl apparently expire after some
+        # (unknown to us) time. So if we load a playlist that hasn't been
+        # updated for some time need to gather info for the songs again. We
+        # probably need to save updated time for each entry instead to make
+        # this always work. TODO: Look into to this to see if there is a
+        # better solution, like saving another link or simply keep track 
+        # of when each song was updated. Maybe add command to update playlist
+        # like this in worst case.
 
+        updated_time = dt.datetime.strptime(playlists[name]['updated'], "%Y-%m-%d %H:%M")
+        time_since_updated = dt.datetime.now() - updated_time
+
+        if time_since_updated > dt.timedelta(hours=4):
+            for song in playlists[name]['songs']:
+                self.add_song_from_url(song['url'], notify=False)
+        else:
+            self.playlist.extend(playlists[name]['songs'])
+        
         self._notify()
         
         return True
