@@ -11,7 +11,7 @@ class Queue:
     PLAYLISTS_PATH = "playlists.json"
 
     # A regular expression that includes all characters EXCEPT the alphanumerics.
-    TITLE_SANITIZE_RE = re.compile('[^a-zA-Z0-9]')
+    TITLE_SANITIZE_RE = re.compile('[^a-zA-Z0-9åäöÅÄÖ]')
 
     def __init__(self) -> None:
         self.playlist = []
@@ -96,7 +96,7 @@ class Queue:
         "Song Title 3"
         """
         
-        return ' '.join(Queue.TITLE_SANITIZE_RE.sub(' ', title).split()) 
+        return ' '.join(Queue.TITLE_SANITIZE_RE.sub(' ', title.replace("'", '')).split()) 
 
     def next(self):
         if self.playlist:
