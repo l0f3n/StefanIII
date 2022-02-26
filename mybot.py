@@ -319,3 +319,4 @@ async def load(ctx, name):
 
     if was_empty_before or not bot.is_playing:
         bot.music_play(ctx)
+        
