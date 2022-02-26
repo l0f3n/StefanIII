@@ -89,13 +89,20 @@ class MyBot(commands.Bot):
         description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"))
 
         playing = "✓" if bot.is_playing else "✗"
-        looping = "✓" if config.get("is_looping") else "✗"
+
         nightcore = "✓" if config.get("nightcore") else "✗"
 
+        looped = "kö"
+        if config.get("is_looping_song"):
+            looping = "✓"
+            looped = "sång"
+        else:
+            looping = "✓" if config.get("is_looping_queue") else "✗"
+            
         time = str(self.queue.duration())
         time = '0' + time if len(time) == 7 else time
 
-        info = f"Spelar: {playing}⠀Loopar: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"
+        info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"
 
         description = info + description
 
@@ -207,18 +214,19 @@ def play_next(ctx, e):
         print(f"Error: play_next(): {e}")
         return
 
-    if bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping"):
+    if bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping_queue"):
         bot.music_stop(ctx)    
-
+    
     elif bot.is_playing:
-        bot.queue.next()
+        if not config.get("is_looping_song"):
+            bot.queue.next()
         bot.music_play(ctx)
     
 
 @bot.command()
 async def next(ctx):
     """ TODO: Write docstring """
-    if not (bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping")):
+    if not (bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping_queue")):
         bot.queue.next()
         bot.music_play(ctx)
     else:
@@ -228,7 +236,7 @@ async def next(ctx):
 @bot.command()
 async def prev(ctx):
     """ TODO: Write docstring """
-    if not (bot.queue.get_current_index() == 1 and not config.get("is_looping")):
+    if not (bot.queue.get_current_index() == 1 and not config.get("is_looping_queue")):
         bot.queue.prev()
         bot.music_play(ctx)
     else:
@@ -311,10 +319,13 @@ async def shuffle(ctx):
 
 
 @bot.command(name="loopa", aliases=["snurra"])
-async def loopa(ctx):
-    """ TODO: Write docstring """    
+async def loopa(ctx, arg1=""):
+    """ TODO: Write docstring """ 
 
-    config.set("is_looping", not config.get("is_looping"))
+    if arg1 == "sång":
+        config.set("is_looping_song", not config.get("is_looping_song"))
+    elif arg1 == "kö" or True:
+        config.set("is_looping_queue", not config.get("is_looping_queue"))
 
 
 @bot.command()

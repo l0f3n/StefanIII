@@ -8,7 +8,8 @@ class Config:
         "token": "YOUR-DISCORD-BOT-TOKEN", 
         "prefix": "-",
         "title_max_length": 30,
-        "is_looping": True,
+        "is_looping_queue": True,
+        "is_looping_song": False,
         "before_current": 10,
         "after_current": 20,
         "message_delete_delay": 2, # Can be set to False to disable message deletion
