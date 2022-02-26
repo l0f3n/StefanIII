@@ -12,6 +12,11 @@ class MyBot(commands.Bot):
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
         'options': '-vn'
     }
+
+    _FFMPEG_NIGHTCORE_OPTIONS = {
+        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
+        'options': f'-af atempo={config.get("nightcore_tempo")},asetrate=44100*{config.get("nightcore_pitch")} -vn'
+    }
     
     def __init__(self, *args, **kwargs):
         commands.Bot.__init__(self, *args, **kwargs)
@@ -59,12 +64,14 @@ class MyBot(commands.Bot):
             print("Error: Cant't play music, bot is not connected to voice")
             return
 
+        ffmpeg_options = MyBot._FFMPEG_NIGHTCORE_OPTIONS if config.get("nightcore") else MyBot._FFMPEG_OPTIONS
+
         if ctx.voice_client.is_playing():
             # Just change audio source if we are currently playing something else
-            ctx.voice_client.source = FFmpegPCMAudio(bot.queue.current_song_source(), **MyBot._FFMPEG_OPTIONS)
+            ctx.voice_client.source = FFmpegPCMAudio(bot.queue.current_song_source(), **ffmpeg_options)
         else:
             # Otherwise start playing as normal
-            source = FFmpegPCMAudio(bot.queue.current_song_source(), **MyBot._FFMPEG_OPTIONS)
+            source = FFmpegPCMAudio(bot.queue.current_song_source(), **ffmpeg_options)
             ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
 
         bot.is_playing = True
@@ -81,14 +88,14 @@ class MyBot(commands.Bot):
     def make_queue_embed(self):
         description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"))
 
-        looping = "✓" if config.get("is_looping") else "✗"
-
         playing = "✓" if bot.is_playing else "✗"
+        looping = "✓" if config.get("is_looping") else "✗"
+        nightcore = "✓" if config.get("nightcore") else "✗"
 
         time = str(self.queue.duration())
         time = '0' + time if len(time) == 7 else time
 
-        info = f"Spelar: {playing}⠀Loopar: {looping}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"
+        info = f"Spelar: {playing}⠀Loopar: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"
 
         description = info + description
 
@@ -308,6 +315,13 @@ async def loopa(ctx):
     """ TODO: Write docstring """    
 
     config.set("is_looping", not config.get("is_looping"))
+
+
+@bot.command()
+async def nightcore(ctx):
+    """ TODO: Write docstring """    
+
+    config.set("nightcore", not config.get("nightcore"))
 
 
 @bot.command()
