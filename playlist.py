@@ -71,7 +71,7 @@ class Queue:
             return
 
         self.playlist.append({  
-            "title": info.get("title").replace("\"", "\'").replace(":", "-"), 
+            "title": ''.join(filter(str.isascii, info.get("title"))), 
             "url": info.get('original_url'), 
             "source": info.get('url'), 
             "duration": info.get("duration")
