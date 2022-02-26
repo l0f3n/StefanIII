@@ -1,4 +1,3 @@
-
 import asyncio
 import discord
 from discord import Embed, Color, FFmpegPCMAudio
@@ -251,7 +250,9 @@ async def play(ctx, *args):
 
     if len(args) == 1 and args[0].startswith(('http', 'www')):
         # Assume user provided url
+        message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
         bot.queue.add_song_from_url(args[0])
+        await message.delete(delay=bot.message_delete_delay)
     elif len(args) >= 1:
         # Assume user provided a string to search for on youtube
         bot.queue.add_song_from_query(' '.join(args))
