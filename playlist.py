@@ -32,6 +32,7 @@ class Queue:
         YDL_OPTIONS = {
             'format': 'bestaudio',
             'extract-audio': True,
+            'ignoreerrors': True,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
@@ -42,7 +43,7 @@ class Queue:
                     self._add_song_from_info(entry_info)
             else:
                 self._add_song_from_info(info)
-        
+
         if notify:
             self._notify()
 
@@ -51,7 +52,8 @@ class Queue:
         YDL_OPTIONS = {
             'format': 'bestaudio',
             'extract-audio': True,
-            'default_search': 'ytsearch',        
+            'default_search': 'ytsearch',
+            'ignoreerrors': True,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
@@ -62,6 +64,11 @@ class Queue:
         self._notify()
 
     def _add_song_from_info(self, info):
+
+        # If a video is unavailable in a playlist we get None as info argument.
+        # So we check that and just ignore it if that is the case.
+        if not info:
+            return
 
         self.playlist.append({  
             "title": info.get("title").replace("\"", "\'").replace(":", "-"), 
