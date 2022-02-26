@@ -9,14 +9,6 @@ class Queue:
 
     PLAYLISTS_PATH = "playlists.json"
 
-    YDL_OPTIONS = {
-            'format': 'bestaudio',
-            'extract-audio': True,
-            'audio-format ': "opus",
-            '--id': True,
-            'outtmpl': "./downloads/%(title)s.%(ext)s"
-        }
-
     def __init__(self) -> None:
         self.playlist = []
         self.current = 0
@@ -37,7 +29,12 @@ class Queue:
 
     def add_song_from_url(self, url: str, notify=True):
 
-        with yt_dlp.YoutubeDL(Queue.YDL_OPTIONS) as ydl:
+        YDL_OPTIONS = {
+            'format': 'bestaudio',
+            'extract-audio': True,
+        }
+
+        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
 
             if 'entries' in info:
@@ -48,6 +45,21 @@ class Queue:
         
         if notify:
             self._notify()
+
+    def add_song_from_query(self, query: str):
+        
+        YDL_OPTIONS = {
+            'format': 'bestaudio',
+            'extract-audio': True,
+            'default_search': 'ytsearch',        
+        }
+
+        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(query, download=False)
+            if 'entries' in info:
+                self._add_song_from_info(info['entries'][0])
+        
+        self._notify()
 
     def _add_song_from_info(self, info):
 

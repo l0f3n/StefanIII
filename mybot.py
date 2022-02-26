@@ -211,19 +211,23 @@ async def prev(ctx):
 
 
 @bot.command()
-async def play(ctx, url=None):
+async def play(ctx, *args):
     """ TODO: Write docstring """    
     # await ctx.message.add_reaction("👌")
 
     was_empty_before = bot.queue.num_songs() == 0
 
-    if url != None:
-        bot.queue.add_song_from_url(url)
+    if len(args) == 1:
+        # Assume user provided url
+        bot.queue.add_song_from_url(args[0])
+    elif len(args) > 1:
+        # Assume user provided a string to search for on youtube
+        bot.queue.add_song_from_query(' '.join(args))
 
     if bot.queue.num_songs() == 0:
         return
 
-    if was_empty_before or not url:
+    if was_empty_before or len(args) == 0:
         bot.music_play(ctx)
     
     # await ctx.message.remove_reaction("👌", bot.user)
@@ -319,4 +323,3 @@ async def load(ctx, name):
 
     if was_empty_before or not bot.is_playing:
         bot.music_play(ctx)
-        
