@@ -44,6 +44,12 @@ class Queue:
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
 
+            # We don't get any info when we (probably among other things) don't
+            # have access to the specified playlist. Just ignore it then.
+            if not info:
+                print("Warning: No info found for the specified url")
+                return
+
             if 'entries' in info:
                 for entry_info in info['entries']:
                     self._add_song_from_info(entry_info)
