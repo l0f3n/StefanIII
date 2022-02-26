@@ -46,7 +46,7 @@ class MyBot(commands.Bot):
     async def _handle_after_invoke(self, ctx):
         await ctx.message.remove_reaction("👌", self.user)
         await ctx.message.add_reaction("👍")
-        if self.message_delete_delay == False:
+        if self.message_delete_delay != False:
             await ctx.message.delete(delay=self.message_delete_delay)
 
     def music_play(self, ctx):       
@@ -230,10 +230,10 @@ async def play(ctx, *args):
 
     was_empty_before = bot.queue.num_songs() == 0
 
-    if len(args) == 1:
+    if len(args) == 1 and args[0].startswith(('http', 'www')):
         # Assume user provided url
         bot.queue.add_song_from_url(args[0])
-    elif len(args) > 1:
+    elif len(args) >= 1:
         # Assume user provided a string to search for on youtube
         bot.queue.add_song_from_query(' '.join(args))
 
