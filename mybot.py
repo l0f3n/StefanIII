@@ -22,6 +22,10 @@ class MyBot(commands.Bot):
 
         self._is_playing = False
         self.latest_queue_message = None
+        self.message_delete_delay = config.get("message_delete_delay")
+
+        self.before_invoke(self._handle_before_invoke)
+        self.after_invoke(self._handle_after_invoke)
 
     @property
     def is_playing(self):
@@ -35,7 +39,16 @@ class MyBot(commands.Bot):
     def _handle_playlist_change(self):
         if self.latest_queue_message:
             asyncio.run_coroutine_threadsafe(bot.latest_queue_message.edit(content=None, embed=self.make_queue_embed()), self.loop)
-    
+
+    async def _handle_before_invoke(self, ctx):
+        await ctx.message.add_reaction("👌")
+
+    async def _handle_after_invoke(self, ctx):
+        await ctx.message.remove_reaction("👌", self.user)
+        await ctx.message.add_reaction("👍")
+        if self.message_delete_delay == False:
+            await ctx.message.delete(delay=self.message_delete_delay)
+
     def music_play(self, ctx):       
         if not ctx.voice_client:
             print("Error: Cant't play music, bot is not connected to voice")

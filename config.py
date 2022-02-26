@@ -11,6 +11,7 @@ class Config:
         "is_looping": True,
         "before_current": 10,
         "after_current": 20,
+        "message_delete_delay": 2, # Can be set to False to disable message deletion
     }
 
     def __init__(self, path: str):
