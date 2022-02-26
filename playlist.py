@@ -2,6 +2,7 @@ import datetime as dt
 import json
 from pathlib import Path
 import random
+import string
 
 import yt_dlp
 
@@ -33,6 +34,7 @@ class Queue:
             'format': 'bestaudio',
             'extract-audio': True,
             'ignoreerrors': True,
+            'quiet': True,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
@@ -54,6 +56,7 @@ class Queue:
             'extract-audio': True,
             'default_search': 'ytsearch',
             'ignoreerrors': True,
+            'quiet': True,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
@@ -68,14 +71,27 @@ class Queue:
         # If a video is unavailable in a playlist we get None as info argument.
         # So we check that and just ignore it if that is the case.
         if not info:
+            print("Warning: Ignoring unavailable video")
             return
 
         self.playlist.append({  
-            "title": ''.join(filter(str.isascii, info.get("title"))).strip(), 
+            "title": self._sanitize_title(info.get('title')), 
             "url": info.get('original_url'), 
             "source": info.get('url'), 
             "duration": info.get("duration")
         })
+
+    def _sanitize_title(self, title):
+        """
+        Only keep letters, digits and spaces from title. Strip whitespace from
+        either side and turn all sequences of mulitple spaces into a single 
+        space.
+
+        >>> queue._sanitize_title(" * Song Title   #3 !!")
+        "Song Title 3"
+        """
+        ALLOWED_CHARS = string.ascii_letters + string.digits + ' '
+        return ' '.join(''.join(filter(lambda x: x in ALLOWED_CHARS, title)).split())
 
     def next(self):
         if self.playlist:
