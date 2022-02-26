@@ -38,6 +38,7 @@ class Queue:
             'extract-audio': True,
             'ignoreerrors': True,
             'quiet': True,
+            'noplaylist': True,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
@@ -60,6 +61,7 @@ class Queue:
             'default_search': 'ytsearch',
             'ignoreerrors': True,
             'quiet': True,
+            'noplaylist': True,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
