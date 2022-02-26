@@ -49,6 +49,11 @@ class MyBot(commands.Bot):
         if self.message_delete_delay != False:
             await ctx.message.delete(delay=self.message_delete_delay)
 
+    async def close(self):
+        if self.latest_queue_message:
+            await self.latest_queue_message.delete()
+        return await super().close()
+
     def music_play(self, ctx):       
         if not ctx.voice_client:
             print("Error: Cant't play music, bot is not connected to voice")
