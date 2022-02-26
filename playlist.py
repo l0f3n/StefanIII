@@ -72,6 +72,13 @@ class Queue:
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(query, download=False)
+            
+            # We don't get any info when we (probably among other things) don't
+            # get any search result for the query. Just ignore it then.
+            if not info:
+                print("Warning: No info found for the specified url")
+                return
+            
             if 'entries' in info:
                 self._add_song_from_info(info['entries'][0])
         
