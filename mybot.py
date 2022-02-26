@@ -226,7 +226,6 @@ async def prev(ctx):
 @bot.command()
 async def play(ctx, *args):
     """ TODO: Write docstring """    
-    # await ctx.message.add_reaction("👌")
 
     was_empty_before = bot.queue.num_songs() == 0
 
@@ -242,10 +241,6 @@ async def play(ctx, *args):
 
     if was_empty_before or len(args) == 0:
         bot.music_play(ctx)
-    
-    # await ctx.message.remove_reaction("👌", bot.user)
-    # await ctx.message.add_reaction("👍")
-    # await ctx.message.delete(delay=5)
 
 
 @bot.command()
