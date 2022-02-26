@@ -220,6 +220,9 @@ async def play(ctx, url=None):
     if url != None:
         bot.queue.add_song_from_url(url)
 
+    if bot.queue.num_songs() == 0:
+        return
+
     if was_empty_before or not url:
         bot.music_play(ctx)
     
