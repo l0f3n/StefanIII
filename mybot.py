@@ -239,6 +239,13 @@ async def play(ctx, *args):
     if bot.queue.num_songs() == 0:
         return
 
+    # Move bot to users channel
+    if ctx.author.voice:
+        if ctx.guild.voice_client and ctx.author.voice.channel != ctx.guild.voice_client.channel:
+            await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
+        else:
+            await ctx.author.voice.channel.connect()
+
     if was_empty_before or len(args) == 0:
         bot.music_play(ctx)
 
