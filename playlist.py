@@ -223,7 +223,7 @@ class Queue:
 
             # Format song time
             time = str(dt.timedelta(seconds=duration))
-            time = time if len(time) == 8 else '0' + time
+            time = '0' + time if len(time) == 7 else time
 
             entry = f"{index:<{index_len}} {title:<{title_len}} [{time}]"
 

@@ -68,7 +68,7 @@ class MyBot(commands.Bot):
         playing = "✓" if bot.is_playing else "✗"
 
         time = str(self.queue.duration())
-        time = time if len(time) == 8 else '0' + time
+        time = '0' + time if len(time) == 7 else time
 
         info = f"Spelar: {playing}⠀Loopar: {looping}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"
 
