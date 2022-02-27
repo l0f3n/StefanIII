@@ -134,12 +134,9 @@ async def prefix(ctx, new_prefix):
 @bot.command(name = "kom", aliases = ["komsi", "älskling", "hit"])
 async def kom(ctx, arg1="", arg2="", arg3=""):
     """ TODO: Write docstring """
-    cm = ctx.invoked_with
-   # await ctx.send("cm: " + cm + "\narg1: " + arg1 + "\narg2: " + arg2 + "\narg3: " + arg3)
-    if (cm == "kom"
-        or (cm == "hit")
-        or (cm == "komsi" and arg1 == "komsi")
-        or (cm == "älskling" and arg1 == "jag" and arg2 == "är" and arg3 == "hemma")):
+    cm = " ".join(filter(None, [ctx.invoked_with, arg1, arg2, arg3]))
+    # await ctx.send("cm: " + cm + "\narg1: " + arg1 + "\narg2: " + arg2 + "\narg3: " + arg3)
+    if cm in ["kom", "kom hit", "komsi komsi", "älskling jag är hemma", "hit"]:
         # If user is in a channel
         if ctx.author.voice:
             # If bot is in a channel
@@ -325,9 +322,9 @@ async def shuffle(ctx):
 async def loopa(ctx, arg1=""):
     """ TODO: Write docstring """ 
 
-    if arg1 == "sång":
+    if arg1 in ["sång", "låt", "stycke"]:
         config.toggle('is_looping_song')
-    elif arg1 == "kö" or True:
+    elif arg1 in ["kö", "lista"] or True:
         config.toggle('is_looping_queue')
 
 
