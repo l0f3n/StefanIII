@@ -55,6 +55,7 @@ class MyBot(commands.Bot):
 
     async def close(self):
         if self.latest_queue_message:
+            await self.latest_queue_message.channel.send("Jag dör! 😱")
             await self.latest_queue_message.delete()
         return await super().close()
 
@@ -253,7 +254,9 @@ async def play(ctx, *args):
         await message.delete(delay=bot.message_delete_delay)
     elif len(args) >= 1:
         # Assume user provided a string to search for on youtube
+        message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
         bot.queue.add_song_from_query(' '.join(args))
+        await message.delete(delay=bot.message_delete_delay)
 
     if bot.queue.num_songs() == 0:
         return
