@@ -5,6 +5,8 @@ import random
 import re
 
 import yt_dlp
+from utils import format_time
+
 
 class Queue:
 
@@ -169,7 +171,7 @@ class Queue:
         return self.playlist
 
     def duration(self, time_scaling=1):
-        return dt.timedelta(seconds=int(sum(song["duration"]/time_scaling for song in self.playlist)))
+        return format_time(int(sum(song["duration"]/time_scaling for song in self.playlist)))
 
     def save(self, name: str, desc: str = None) -> bool:
         playlists = {}

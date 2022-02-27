@@ -96,12 +96,11 @@ class MyBot(commands.Bot):
         looped = "kö"
         if config.get("is_looping_song"):
             looping = "✓"
-            looped = "sång"
+            looped = "låt"
         else:
             looping = "✓" if config.get("is_looping_queue") else "✗"
             
         time = str(self.queue.duration(time_scaling))
-        time = '0' + time if len(time) == 7 else time
 
         info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"
 
