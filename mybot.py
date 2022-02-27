@@ -326,16 +326,16 @@ async def loopa(ctx, arg1=""):
     """ TODO: Write docstring """ 
 
     if arg1 == "sång":
-        config.set("is_looping_song", not config.get("is_looping_song"))
+        config.toggle('is_looping_song')
     elif arg1 == "kö" or True:
-        config.set("is_looping_queue", not config.get("is_looping_queue"))
+        config.toggle('is_looping_queue')
 
 
 @bot.command()
 async def nightcore(ctx):
     """ TODO: Write docstring """    
 
-    config.set("nightcore", not config.get("nightcore"))
+    config.toggle('nightcore')
 
 
 @bot.command()
