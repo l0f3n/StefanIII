@@ -44,6 +44,9 @@ class Config:
         else:
             print(f"Error: Can't set config with key '{key}': No such config exists.")
     
+    def toggle(self, key: str):
+        self.set(key, not self.get(key))
+
     def load(self, path: str):
         self.path = Path(path)
         
