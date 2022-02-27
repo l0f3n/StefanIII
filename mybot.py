@@ -85,7 +85,9 @@ class MyBot(commands.Bot):
         bot.is_playing = False
 
     def make_queue_embed(self):
-        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"))
+        time_scaling = config.get("nightcore_tempo") if config.get("nightcore") else 1
+
+        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"), time_scaling)
 
         playing = "✓" if bot.is_playing else "✗"
 
@@ -98,7 +100,7 @@ class MyBot(commands.Bot):
         else:
             looping = "✓" if config.get("is_looping_queue") else "✗"
             
-        time = str(self.queue.duration())
+        time = str(self.queue.duration(time_scaling))
         time = '0' + time if len(time) == 7 else time
 
         info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"

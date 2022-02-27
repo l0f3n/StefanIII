@@ -168,8 +168,8 @@ class Queue:
     def get_queue(self):
         return self.playlist
 
-    def duration(self):
-        return dt.timedelta(seconds=sum(song["duration"] for song in self.playlist))
+    def duration(self, time_scaling=1):
+        return dt.timedelta(seconds=int(sum(song["duration"]/time_scaling for song in self.playlist)))
 
     def save(self, name: str, desc: str = None) -> bool:
         playlists = {}
@@ -230,7 +230,7 @@ class Queue:
         
         return True
 
-    def playlist_string(self, title_max_len, before_current, after_current):
+    def playlist_string(self, title_max_len, before_current, after_current, time_scaling=1):
         if not self.playlist:
             return ""
 
@@ -253,7 +253,7 @@ class Queue:
         entries = []
 
         for i, song in enumerate(self.playlist[start:end], start=self._prepare_index_(start)):
-            duration = song['duration']
+            duration = int(song['duration']/time_scaling)
 
             # Format song index
             index = str(i) + ':'
