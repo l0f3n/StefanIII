@@ -225,6 +225,7 @@ class Queue:
         if time_since_updated > dt.timedelta(hours=4):
             for song in playlists[name]['songs']:
                 self.add_song_from_url(song['url'], notify=False)
+            self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])
         
