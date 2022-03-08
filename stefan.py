@@ -212,7 +212,7 @@ def play_next(ctx, e):
         print(f"Error: play_next(): {e}")
         return
 
-    if stefan.queue.get_current_index() == stefan.queue.num_songs() and not config.get("is_looping_queue"):
+    if stefan.queue.get_current_index() == stefan.queue.num_songs() and not (config.get("is_looping_queue") or config.get("is_looping_song")):
         stefan.music_stop(ctx)    
     
     elif stefan.is_playing:
