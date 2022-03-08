@@ -205,6 +205,9 @@ class Queue:
         return format_time(int(sum(song["duration"]/time_scaling for song in self.playlist)))
 
     def save(self, name: str, desc: str = None) -> bool:
+        if len(self.playlist) == 0:
+            return False
+        
         playlists = {}
         if Path(Queue.PLAYLISTS_PATH).exists():
             with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
