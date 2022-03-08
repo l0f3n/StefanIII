@@ -5,7 +5,9 @@ import sys
 class Config:
 
     DEFAULT = {
-        "token": "YOUR-DISCORD-BOT-TOKEN", 
+        "token": "YOUR-DISCORD-BOT-TOKEN",
+        "spotify_id": "YOUR-SPOTIFY-ID",
+        "spotify_secret": "YOUR-SPOTIFY-SECRET",
         "prefix": "-",
         "title_max_length": 30,
         "is_looping_queue": True,

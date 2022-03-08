@@ -5,8 +5,11 @@ import random
 import re
 
 import yt_dlp
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 from utils import format_time
 
+from config import config
 
 class Queue:
 
@@ -30,11 +33,19 @@ class Queue:
         for callback in self._on_update_callbacks:
             callback()
 
+    def _is_spotify_url(self, url: str):
+        return url.startswith("https://open.spotify.com/")
+
     def add_on_update_callback(self, callback):
         self._on_update_callbacks.append(callback)
 
-    def add_song_from_url(self, url: str, notify=True):
-
+    def add_song_from_url(self, url: str):
+        if self._is_spotify_url(url):
+            self.add_song_from_spotify_url(url)
+        else:
+            self.add_song_from_youtube_url(url)
+    
+    def add_song_from_youtube_url(self, url, notify=True):
         YDL_OPTIONS = {
             'format': 'bestaudio',
             'extract-audio': True,
@@ -60,6 +71,24 @@ class Queue:
 
         if notify:
             self._notify()
+
+    def _spotify_query_string(self, track):
+        return track['name'] + '-' + track['artists'][0]['name']
+
+    def add_song_from_spotify_url(self, url: str):
+        spotify = spotipy.Spotify(
+                    auth_manager=SpotifyClientCredentials(
+                        client_id=config.get("spotify_id"), 
+                        client_secret=config.get("spotify_secret")))
+        
+        parsed_url = url.replace("https://open.spotify.com/", "")
+        item_type, item_id = parsed_url.split("/")
+        
+        if item_type == "track":
+            self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
+        elif item_type == "playlist":
+            for track in spotify.playlist(item_id)['tracks']['items']:
+                self.add_song_from_query(self._spotify_query_string(track['track']))
 
     def add_song_from_query(self, query: str):
         
@@ -224,7 +253,7 @@ class Queue:
 
         if time_since_updated > dt.timedelta(hours=4):
             for song in playlists[name]['songs']:
-                self.add_song_from_url(song['url'], notify=False)
+                self.add_song_from_youtube_url(song['url'], notify=False)
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])
