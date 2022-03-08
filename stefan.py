@@ -309,7 +309,9 @@ async def move(ctx, index):
     """ TODO: Write docstring """    
 
     stefan.queue.move(int(index))
-    stefan.music_play(ctx)
+
+    if stefan.queue.num_songs() > 0:
+        stefan.music_play(ctx)
 
 
 @stefan.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
