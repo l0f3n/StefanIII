@@ -18,6 +18,14 @@ class Queue:
     # A regular expression that includes all characters EXCEPT the alphanumerics.
     TITLE_SANITIZE_RE = re.compile('[^a-zA-Z0-9åäöÅÄÖ]')
 
+    COMMON_YDL_OPTIONS = {
+        'format': 'bestaudio',
+        'extract-audio': True,
+        'ignoreerrors': True,
+        'quiet': True,
+        'noplaylist': True,
+    }
+
     def __init__(self) -> None:
         self.playlist = []
         self.current = 0
@@ -47,11 +55,7 @@ class Queue:
     
     def add_song_from_youtube_url(self, url, notify=True):
         YDL_OPTIONS = {
-            'format': 'bestaudio',
-            'extract-audio': True,
-            'ignoreerrors': True,
-            'quiet': True,
-            'noplaylist': True,
+            **Queue.COMMON_YDL_OPTIONS,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
@@ -93,12 +97,8 @@ class Queue:
     def add_song_from_query(self, query: str):
         
         YDL_OPTIONS = {
-            'format': 'bestaudio',
-            'extract-audio': True,
+            **Queue.COMMON_YDL_OPTIONS,
             'default_search': 'ytsearch',
-            'ignoreerrors': True,
-            'quiet': True,
-            'noplaylist': True,
         }
 
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
