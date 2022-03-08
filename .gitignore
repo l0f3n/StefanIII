@@ -3,3 +3,4 @@ downloads/
 playlists.json
 *.pyc
 __pycache__/
+.cache
