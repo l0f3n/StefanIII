@@ -6,7 +6,7 @@ from discord.ext import commands
 from config import config
 import playlist
 
-class MyBot(commands.Bot):
+class Stefan(commands.Bot):
     _FFMPEG_OPTIONS = {
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
         'options': '-vn'
@@ -42,7 +42,7 @@ class MyBot(commands.Bot):
 
     def _handle_playlist_change(self):
         if self.latest_queue_message:
-            asyncio.run_coroutine_threadsafe(bot.latest_queue_message.edit(content=None, embed=self.make_queue_embed()), self.loop)
+            asyncio.run_coroutine_threadsafe(stefan.latest_queue_message.edit(content=None, embed=self.make_queue_embed()), self.loop)
 
     async def _handle_before_invoke(self, ctx):
         await ctx.message.add_reaction("👌")
@@ -64,17 +64,17 @@ class MyBot(commands.Bot):
             print("Error: Cant't play music, bot is not connected to voice")
             return
 
-        ffmpeg_options = MyBot._FFMPEG_NIGHTCORE_OPTIONS if config.get("nightcore") else MyBot._FFMPEG_OPTIONS
+        ffmpeg_options = Stefan._FFMPEG_NIGHTCORE_OPTIONS if config.get("nightcore") else Stefan._FFMPEG_OPTIONS
 
         if ctx.voice_client.is_playing():
             # Just change audio source if we are currently playing something else
-            ctx.voice_client.source = FFmpegPCMAudio(bot.queue.current_song_source(), **ffmpeg_options)
+            ctx.voice_client.source = FFmpegPCMAudio(stefan.queue.current_song_source(), **ffmpeg_options)
         else:
             # Otherwise start playing as normal
-            source = FFmpegPCMAudio(bot.queue.current_song_source(), **ffmpeg_options)
+            source = FFmpegPCMAudio(stefan.queue.current_song_source(), **ffmpeg_options)
             ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
 
-        bot.is_playing = True
+        stefan.is_playing = True
 
     def music_stop(self, ctx):        
         if not ctx.voice_client:
@@ -83,14 +83,14 @@ class MyBot(commands.Bot):
         if ctx.voice_client.is_playing():
             ctx.voice_client.stop()
 
-        bot.is_playing = False
+        stefan.is_playing = False
 
     def make_queue_embed(self):
         time_scaling = config.get("nightcore_tempo") if config.get("nightcore") else 1
 
         description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"), time_scaling)
 
-        playing = "✓" if bot.is_playing else "✗"
+        playing = "✓" if stefan.is_playing else "✗"
 
         nightcore = "✓" if config.get("nightcore") else "✗"
 
@@ -103,35 +103,35 @@ class MyBot(commands.Bot):
             
         time = str(self.queue.duration(time_scaling))
 
-        info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {bot.queue.num_songs()}⠀Längd: {time}\n"
+        info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {stefan.queue.num_songs()}⠀Längd: {time}\n"
 
         description = info + description
 
         return Embed(color=Color.orange(), title=f"Nuvarande kö 😙", description=description)
         
 
-bot = MyBot(command_prefix=config.get("prefix"))
+stefan = Stefan(command_prefix=config.get("prefix"))
 
-@bot.event
+@stefan.event
 async def on_ready():
     print("Stefan anmäler sig för tjänstgöring.")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ert skitsnack"))
+    await stefan.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ert skitsnack"))
 
-@bot.command()
+@stefan.command()
 async def ping(ctx):
     """ TODO: Write docstring """
     await ctx.message.channel.send("Pong!")
 
-@bot.command(name = "prefix")
+@stefan.command(name = "prefix")
 async def prefix(ctx, new_prefix):
     """ TODO: Write docstring """
 
-    bot.command_prefix = new_prefix
+    stefan.command_prefix = new_prefix
     config.set("prefix", new_prefix)
 
     await ctx.message.channel.send("Tack för mitt nya prefix! 🥰")
 
-@bot.command(name = "kom", aliases = ["komsi", "älskling", "hit"])
+@stefan.command(name = "kom", aliases = ["komsi", "älskling", "hit"])
 async def kom(ctx, arg1="", arg2="", arg3=""):
     """ TODO: Write docstring """
     cm = " ".join(filter(None, [ctx.invoked_with, arg1, arg2, arg3]))
@@ -164,7 +164,7 @@ async def kom(ctx, arg1="", arg2="", arg3=""):
     else:
         pass
 
-@bot.command(name = "stick", aliases = ["schas", "försvinn", "dra", "gå"])
+@stefan.command(name = "stick", aliases = ["schas", "försvinn", "dra", "gå"])
 async def stick(ctx):
     """ TODO: Write docstring """
     # If bot is in a channel
@@ -197,10 +197,10 @@ async def stick(ctx):
     else:
         await ctx.send("Jag har redan stuckit ju! 💔")
 
-@bot.command(name = "hjälp", aliases = ["hilfe", "aidez-moi", "h"])
+@stefan.command(name = "hjälp", aliases = ["hilfe", "aidez-moi", "h"])
 async def hjälp(ctx):
     """ TODO: Write docstring """
-    embed=Embed(title="Mina kommandon 😎 :", color=Color.orange(), description = f"Genom att skriva \"{bot.command_prefix}\" följt av ett av nedanstående kommandon kan du få mig att göra roliga saker! Lek med mig! 🥰")
+    embed=Embed(title="Mina kommandon 😎 :", color=Color.orange(), description = f"Genom att skriva \"{stefan.command_prefix}\" följt av ett av nedanstående kommandon kan du få mig att göra roliga saker! Lek med mig! 🥰")
     embed.add_field(name="**stick / gå / schas / försvinn / dra**", value="Säg åt mig att lämna röstkanalen. 😥", inline=False)
     embed.add_field(name="**kom / hit / komsi komsi / älskling jag är hemma**", value="Be mig att göra dig sällskap! 😇", inline=False)
     embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")
@@ -212,53 +212,53 @@ def play_next(ctx, e):
         print(f"Error: play_next(): {e}")
         return
 
-    if bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping_queue"):
-        bot.music_stop(ctx)    
+    if stefan.queue.get_current_index() == stefan.queue.num_songs() and not config.get("is_looping_queue"):
+        stefan.music_stop(ctx)    
     
-    elif bot.is_playing:
+    elif stefan.is_playing:
         if not config.get("is_looping_song"):
-            bot.queue.next()
-        bot.music_play(ctx)
+            stefan.queue.next()
+        stefan.music_play(ctx)
     
 
-@bot.command()
+@stefan.command()
 async def next(ctx):
     """ TODO: Write docstring """
-    if not (bot.queue.get_current_index() == bot.queue.num_songs() and not config.get("is_looping_queue")):
-        bot.queue.next()
-        bot.music_play(ctx)
+    if not (stefan.queue.get_current_index() == stefan.queue.num_songs() and not config.get("is_looping_queue")):
+        stefan.queue.next()
+        stefan.music_play(ctx)
     else:
-        bot.music_stop(ctx)
+        stefan.music_stop(ctx)
 
 
-@bot.command()
+@stefan.command()
 async def prev(ctx):
     """ TODO: Write docstring """
-    if not (bot.queue.get_current_index() == 1 and not config.get("is_looping_queue")):
-        bot.queue.prev()
-        bot.music_play(ctx)
+    if not (stefan.queue.get_current_index() == 1 and not config.get("is_looping_queue")):
+        stefan.queue.prev()
+        stefan.music_play(ctx)
     else:
-        bot.music_stop(ctx)
+        stefan.music_stop(ctx)
 
 
-@bot.command()
+@stefan.command()
 async def play(ctx, *args):
     """ TODO: Write docstring """    
 
-    was_empty_before = bot.queue.num_songs() == 0
+    was_empty_before = stefan.queue.num_songs() == 0
 
     if len(args) == 1 and args[0].startswith(('http', 'www')):
         # Assume user provided url
         message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
-        bot.queue.add_song_from_url(args[0])
-        await message.delete(delay=bot.message_delete_delay)
+        stefan.queue.add_song_from_url(args[0])
+        await message.delete(delay=stefan.message_delete_delay)
     elif len(args) >= 1:
         # Assume user provided a string to search for on youtube
         message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
-        bot.queue.add_song_from_query(' '.join(args))
-        await message.delete(delay=bot.message_delete_delay)
+        stefan.queue.add_song_from_query(' '.join(args))
+        await message.delete(delay=stefan.message_delete_delay)
 
-    if bot.queue.num_songs() == 0:
+    if stefan.queue.num_songs() == 0:
         return
 
     # Move bot to users channel
@@ -270,57 +270,57 @@ async def play(ctx, *args):
             await ctx.author.voice.channel.connect()
 
     if was_empty_before or len(args) == 0:
-        bot.music_play(ctx)
+        stefan.music_play(ctx)
 
 
-@bot.command()
+@stefan.command()
 async def stop(ctx):
     """ TODO: Write docstring """
-    bot.music_stop(ctx)
+    stefan.music_stop(ctx)
 
 
-@bot.command()
+@stefan.command()
 async def clear(ctx):
     """ TODO: Write docstring """    
 
-    bot.music_stop(ctx)
-    bot.queue.clear()
+    stefan.music_stop(ctx)
+    stefan.queue.clear()
 
 
-@bot.command()
+@stefan.command()
 async def remove(ctx, index: int):
     """ TODO: Write docstring """    
 
-    removed_current_song = bot.queue.get_current_index() == index
+    removed_current_song = stefan.queue.get_current_index() == index
 
-    bot.queue.remove(index)
+    stefan.queue.remove(index)
 
-    if bot.queue.num_songs() > 0:
+    if stefan.queue.num_songs() > 0:
 
         if removed_current_song:
-            bot.music_play(ctx)
+            stefan.music_play(ctx)
 
     else:
-        bot.music_stop(ctx)
+        stefan.music_stop(ctx)
     
 
-@bot.command()
+@stefan.command()
 async def move(ctx, index):
     """ TODO: Write docstring """    
 
-    bot.queue.move(int(index))
-    bot.music_play(ctx)
+    stefan.queue.move(int(index))
+    stefan.music_play(ctx)
 
 
-@bot.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
+@stefan.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
 async def shuffle(ctx):
     """ TODO: Write docstring """    
 
-    bot.queue.shuffle()
-    bot.music_play(ctx)
+    stefan.queue.shuffle()
+    stefan.music_play(ctx)
 
 
-@bot.command(name="loopa", aliases=["snurra"])
+@stefan.command(name="loopa", aliases=["snurra"])
 async def loopa(ctx, arg1=""):
     """ TODO: Write docstring """ 
 
@@ -330,44 +330,44 @@ async def loopa(ctx, arg1=""):
         config.toggle('is_looping_queue')
 
 
-@bot.command()
+@stefan.command()
 async def nightcore(ctx):
     """ TODO: Write docstring """    
 
     config.toggle('nightcore')
 
 
-@bot.command()
+@stefan.command()
 async def playlists(ctx):
     embed=Embed(title="Spellistor:", color=Color.orange())
-    for name, desc, songs in bot.queue.get_playlists():
+    for name, desc, songs in stefan.queue.get_playlists():
         noun = "låt" if len(songs) == 1 else "låtar"
         embed.add_field(name=f"**{name} ({len(songs)} {noun})**", value=f"{desc}", inline=False)
     await ctx.send(embed=embed)
 
 
-@bot.command()
+@stefan.command()
 async def kö(ctx, name=None):
     
-    if bot.latest_queue_message:
-        await bot.latest_queue_message.delete()
+    if stefan.latest_queue_message:
+        await stefan.latest_queue_message.delete()
     
-    bot.latest_queue_message = await ctx.send(embed=bot.make_queue_embed())
+    stefan.latest_queue_message = await ctx.send(embed=stefan.make_queue_embed())
 
 
-@bot.command()
+@stefan.command()
 async def save(ctx, name, desc=None):
     """ TODO: Write docstring """
-    bot.queue.save(name, desc)
+    stefan.queue.save(name, desc)
 
 
-@bot.command()
+@stefan.command()
 async def load(ctx, name):
     """ TODO: Write docstring """
     
-    was_empty_before = bot.queue.num_songs() == 0
+    was_empty_before = stefan.queue.num_songs() == 0
 
-    bot.queue.load(name)
+    stefan.queue.load(name)
 
-    if was_empty_before or not bot.is_playing:
-        bot.music_play(ctx)
+    if was_empty_before or not stefan.is_playing:
+        stefan.music_play(ctx)

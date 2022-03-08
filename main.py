@@ -1,6 +1,6 @@
 """ TODO: Write docstring """
 
 from config import config
-from mybot import bot
+from stefan import stefan
 
-bot.run(config.get("token"))
+stefan.run(config.get("token"))
