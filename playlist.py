@@ -73,7 +73,7 @@ class Queue:
             self._notify()
 
     def _spotify_query_string(self, track):
-        return track['name'] + '-' + track['artists'][0]['name']
+        return track['name'] + ' - ' + track['artists'][0]['name']
 
     def add_song_from_spotify_url(self, url: str):
         spotify = spotipy.Spotify(
