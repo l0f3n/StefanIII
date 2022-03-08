@@ -169,10 +169,12 @@ class Queue:
 
     def remove(self, index: int):
         index = self._unprepare_index_(index)
-        if (index) < len(self.playlist):
-            del self.playlist[(index)]
+        if index < len(self.playlist):
+            del self.playlist[index]
         
-        if index < self.current:
+        # Decrease index if we removed song before current one in queue or
+        # we remove the song at the end of the queue that was not the last song
+        if index < self.current or (index != 0 and index == len(self.playlist)):
             self.current -= 1
 
         self._notify()
