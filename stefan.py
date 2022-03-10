@@ -24,7 +24,7 @@ class Stefan(commands.Bot):
         self.queue.add_on_update_callback(self._handle_playlist_change)
         config.add_on_update_callback(self._handle_playlist_change)
 
-        self._is_playing = False
+        self.is_playing = False
         self.latest_queue_message = None
         self.message_delete_delay = config.get("message_delete_delay")
 
@@ -32,19 +32,18 @@ class Stefan(commands.Bot):
         self.after_invoke(self._handle_after_invoke)
 
         self._ctx = None
-
-    @property
-    def is_playing(self):
-        return self._is_playing
-
-    @is_playing.setter
-    def is_playing(self, value):
-        self._is_playing = value
-        self._handle_playlist_change()
+        self._is_handle_playlist_change_called = False
 
     def _handle_playlist_change(self):
+        self._is_handle_playlist_change_called = True
+
+        if not self.is_playing and self.queue.num_songs() == 1:
+            self.music_play()
+        
         if self.latest_queue_message:
             asyncio.run_coroutine_threadsafe(stefan.latest_queue_message.edit(content=None, embed=self.make_queue_embed()), self.loop)
+        
+        self._is_handle_playlist_change_called = False
 
     async def _handle_before_invoke(self, ctx):
         self._ctx = ctx
@@ -63,9 +62,9 @@ class Stefan(commands.Bot):
             await self.latest_queue_message.delete()
         return await super().close()
 
-    def music_play(self, ctx=None):       
+    def music_play(self, ctx=None):
         ctx = ctx or self._ctx
-        
+
         if not ctx or not ctx.voice_client:
             print("Error: Cant't play music, bot is not connected to voice")
             return
@@ -82,7 +81,10 @@ class Stefan(commands.Bot):
 
         stefan.is_playing = True
 
-    def music_stop(self, ctx=None):        
+        if not self._is_handle_playlist_change_called:
+            self._handle_playlist_change()
+
+    def music_stop(self, ctx=None):
         ctx = ctx or self._ctx
         
         if not ctx or not ctx.voice_client:
@@ -92,6 +94,9 @@ class Stefan(commands.Bot):
             ctx.voice_client.stop()
 
         stefan.is_playing = False
+
+        if not self._is_handle_playlist_change_called:
+            self._handle_playlist_change()
 
     def make_queue_embed(self):
         time_scaling = config.get("nightcore_tempo") if config.get("nightcore") else 1
@@ -253,8 +258,6 @@ async def prev(ctx):
 async def play(ctx, *args):
     """ TODO: Write docstring """    
 
-    was_empty_before = stefan.queue.num_songs() == 0
-
     if len(args) == 1 and args[0].startswith(('http', 'www')):
         # Assume user provided url
         message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
@@ -277,7 +280,7 @@ async def play(ctx, *args):
         else:
             await ctx.author.voice.channel.connect()
 
-    if was_empty_before or len(args) == 0:
+    if not stefan.is_playing or len(args) == 0:
         stefan.music_play()
 
 
