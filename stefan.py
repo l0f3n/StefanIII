@@ -31,6 +31,8 @@ class Stefan(commands.Bot):
         self.before_invoke(self._handle_before_invoke)
         self.after_invoke(self._handle_after_invoke)
 
+        self._ctx = None
+
     @property
     def is_playing(self):
         return self._is_playing
@@ -45,9 +47,11 @@ class Stefan(commands.Bot):
             asyncio.run_coroutine_threadsafe(stefan.latest_queue_message.edit(content=None, embed=self.make_queue_embed()), self.loop)
 
     async def _handle_before_invoke(self, ctx):
+        self._ctx = ctx
         await ctx.message.add_reaction("👌")
 
     async def _handle_after_invoke(self, ctx):
+        self._ctx = None
         await ctx.message.remove_reaction("👌", self.user)
         await ctx.message.add_reaction("👍")
         if self.message_delete_delay != False:
@@ -59,8 +63,10 @@ class Stefan(commands.Bot):
             await self.latest_queue_message.delete()
         return await super().close()
 
-    def music_play(self, ctx):       
-        if not ctx.voice_client:
+    def music_play(self, ctx=None):       
+        ctx = ctx or self._ctx
+        
+        if not ctx or not ctx.voice_client:
             print("Error: Cant't play music, bot is not connected to voice")
             return
 
@@ -76,8 +82,10 @@ class Stefan(commands.Bot):
 
         stefan.is_playing = True
 
-    def music_stop(self, ctx):        
-        if not ctx.voice_client:
+    def music_stop(self, ctx=None):        
+        ctx = ctx or self._ctx
+        
+        if not ctx or not ctx.voice_client:
             return
 
         if ctx.voice_client.is_playing():
@@ -226,9 +234,9 @@ async def next(ctx):
     """ TODO: Write docstring """
     if not (stefan.queue.get_current_index() == stefan.queue.num_songs() and not config.get("is_looping_queue")):
         stefan.queue.next()
-        stefan.music_play(ctx)
+        stefan.music_play()
     else:
-        stefan.music_stop(ctx)
+        stefan.music_stop()
 
 
 @stefan.command()
@@ -236,9 +244,9 @@ async def prev(ctx):
     """ TODO: Write docstring """
     if not (stefan.queue.get_current_index() == 1 and not config.get("is_looping_queue")):
         stefan.queue.prev()
-        stefan.music_play(ctx)
+        stefan.music_play()
     else:
-        stefan.music_stop(ctx)
+        stefan.music_stop()
 
 
 @stefan.command()
@@ -270,20 +278,20 @@ async def play(ctx, *args):
             await ctx.author.voice.channel.connect()
 
     if was_empty_before or len(args) == 0:
-        stefan.music_play(ctx)
+        stefan.music_play()
 
 
 @stefan.command()
 async def stop(ctx):
     """ TODO: Write docstring """
-    stefan.music_stop(ctx)
+    stefan.music_stop()
 
 
 @stefan.command()
 async def clear(ctx):
     """ TODO: Write docstring """    
 
-    stefan.music_stop(ctx)
+    stefan.music_stop()
     stefan.queue.clear()
 
 
@@ -298,10 +306,10 @@ async def remove(ctx, index: int):
     if stefan.queue.num_songs() > 0:
 
         if removed_current_song:
-            stefan.music_play(ctx)
+            stefan.music_play()
 
     else:
-        stefan.music_stop(ctx)
+        stefan.music_stop()
     
 
 @stefan.command()
@@ -311,7 +319,7 @@ async def move(ctx, index):
     stefan.queue.move(int(index))
 
     if stefan.queue.num_songs() > 0:
-        stefan.music_play(ctx)
+        stefan.music_play()
 
 
 @stefan.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
@@ -319,7 +327,7 @@ async def shuffle(ctx):
     """ TODO: Write docstring """    
 
     stefan.queue.shuffle()
-    stefan.music_play(ctx)
+    stefan.music_play()
 
 
 @stefan.command(name="loopa", aliases=["snurra"])
@@ -372,4 +380,4 @@ async def load(ctx, name):
     stefan.queue.load(name)
 
     if was_empty_before or not stefan.is_playing:
-        stefan.music_play(ctx)
+        stefan.music_play()
