@@ -24,9 +24,9 @@ class Config:
         self.load(path)
         self._on_update_callbacks = []
 
-    def _notify(self):
+    async def _notify(self):
         for callback in self._on_update_callbacks:
-            callback()
+            await callback()
 
     def add_on_update_callback(self, callback):
         self._on_update_callbacks.append(callback)
@@ -38,16 +38,16 @@ class Config:
             print(f"Error: No config with key '{key}' exists.")
             return None
 
-    def set(self, key: str, value):
+    async def set(self, key: str, value):
         if key in self.config:
             self.config[key] = value
             self.save()
-            self._notify()
+            await self._notify()
         else:
             print(f"Error: Can't set config with key '{key}': No such config exists.")
     
-    def toggle(self, key: str):
-        self.set(key, not self.get(key))
+    async def toggle(self, key: str):
+        await self.set(key, not self.get(key))
 
     def load(self, path: str):
         self.path = Path(path)

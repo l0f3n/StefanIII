@@ -37,9 +37,9 @@ class Queue:
     def _unprepare_index_(self, index):
         return index-1
 
-    def _notify(self):
+    async def _notify(self):
         for callback in self._on_update_callbacks:
-            callback()
+            await callback()
 
     def _is_spotify_url(self, url: str):
         return url.startswith("https://open.spotify.com/")
@@ -47,13 +47,13 @@ class Queue:
     def add_on_update_callback(self, callback):
         self._on_update_callbacks.append(callback)
 
-    def add_song_from_url(self, url: str):
+    async def add_song_from_url(self, url: str):
         if self._is_spotify_url(url):
-            self.add_song_from_spotify_url(url)
+            await self.add_song_from_spotify_url(url)
         else:
-            self.add_song_from_youtube_url(url)
+            await self.add_song_from_youtube_url(url)
     
-    def add_song_from_youtube_url(self, url):
+    async def add_song_from_youtube_url(self, url):
         YDL_OPTIONS = {
             **Queue.COMMON_YDL_OPTIONS,
         }
@@ -69,14 +69,14 @@ class Queue:
 
             if 'entries' in info:
                 for entry_info in info['entries']:
-                    self._add_song_from_info(entry_info)
+                    await self._add_song_from_info(entry_info)
             else:
-                self._add_song_from_info(info)
+                await self._add_song_from_info(info)
 
     def _spotify_query_string(self, track):
         return track['name'] + ' - ' + track['artists'][0]['name']
 
-    def add_song_from_spotify_url(self, url: str):
+    async def add_song_from_spotify_url(self, url: str):
         spotify = spotipy.Spotify(
                     auth_manager=SpotifyClientCredentials(
                         client_id=config.get("spotify_id"), 
@@ -86,13 +86,13 @@ class Queue:
         item_type, item_id = parsed_url.split("/")
         
         if item_type == "track":
-            self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
+            await self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
 
         elif item_type == "playlist":
             for track in spotify.playlist(item_id)['tracks']['items']:
-                self.add_song_from_query(self._spotify_query_string(track['track']))
+                await self.add_song_from_query(self._spotify_query_string(track['track']))
 
-    def add_song_from_query(self, query: str):
+    async def add_song_from_query(self, query: str):
         
         YDL_OPTIONS = {
             **Queue.COMMON_YDL_OPTIONS,
@@ -109,9 +109,9 @@ class Queue:
                 return
             
             if 'entries' in info:
-                self._add_song_from_info(info['entries'][0])
+                await self._add_song_from_info(info['entries'][0])
 
-    def _add_song_from_info(self, info):
+    async def _add_song_from_info(self, info):
 
         # If a video is unavailable in a playlist we get None as info argument.
         # So we check that and just ignore it if that is the case.
@@ -126,7 +126,7 @@ class Queue:
             "duration": info.get("duration")
         })
 
-        self._notify()
+        await self._notify()
 
     def _sanitize_title(self, title):
         """
@@ -140,32 +140,32 @@ class Queue:
         
         return ' '.join(Queue.TITLE_SANITIZE_RE.sub(' ', title.replace("'", '')).split()) 
 
-    def next(self):
+    async def next(self):
         if self.playlist:
             self.current = (self.current + 1) % len(self.playlist)
-        self._notify()
+        await self._notify()
     
-    def prev(self):
+    async def prev(self):
         if self.playlist:
             self.current = (self.current - 1) % len(self.playlist)
-        self._notify()
+        await self._notify()
 
-    def move(self, index):
+    async def move(self, index):
         index = self._unprepare_index_(index)
         if index < len(self.playlist):
             self.current = index
-        self._notify()
+        await self._notify()
 
-    def shuffle(self):
+    async def shuffle(self):
         random.shuffle(self.playlist)
-        self._notify()
+        await self._notify()
 
-    def clear(self):
+    async def clear(self):
         self.playlist = []
         self.current = 0
-        self._notify()
+        await self._notify()
 
-    def remove(self, index: int):
+    async def remove(self, index: int):
         index = self._unprepare_index_(index)
         if index < len(self.playlist):
             del self.playlist[index]
@@ -175,7 +175,7 @@ class Queue:
         if index < self.current or (index != 0 and self.current == len(self.playlist)):
             self.current -= 1
 
-        self._notify()
+        await self._notify()
 
     def num_songs(self):
         return len(self.playlist)
@@ -230,7 +230,7 @@ class Queue:
         
         return True
 
-    def load(self, name: str) -> bool:
+    async def load(self, name: str) -> bool:
         if not Path(Queue.PLAYLISTS_PATH).exists():
             print("Error: Can't load playlists, no such file exists")
             return False
@@ -260,7 +260,7 @@ class Queue:
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])
-            self._notify()
+            await self._notify()
         
         return True
 

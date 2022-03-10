@@ -34,15 +34,15 @@ class Stefan(commands.Bot):
         self._ctx = None
         self._is_handle_playlist_change_called = False
 
-    def _handle_playlist_change(self):
+    async def _handle_playlist_change(self):
         self._is_handle_playlist_change_called = True
 
         if not self.is_playing and self.queue.num_songs() == 1:
             self.music_play()
         
         if self.latest_queue_message:
-            asyncio.run_coroutine_threadsafe(stefan.latest_queue_message.edit(content=None, embed=self.make_queue_embed()), self.loop)
-        
+            await stefan.latest_queue_message.edit(content=None, embed=self.make_queue_embed())
+            
         self._is_handle_playlist_change_called = False
 
     async def _handle_before_invoke(self, ctx):
@@ -77,12 +77,12 @@ class Stefan(commands.Bot):
         else:
             # Otherwise start playing as normal
             source = FFmpegPCMAudio(stefan.queue.current_song_source(), **ffmpeg_options)
-            ctx.voice_client.play(source, after=lambda e: play_next(ctx, e))
+            ctx.voice_client.play(source, after=lambda e: play_next(ctx, e, self.loop))
 
         stefan.is_playing = True
 
         if not self._is_handle_playlist_change_called:
-            self._handle_playlist_change()
+            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
 
     def music_stop(self, ctx=None):
         ctx = ctx or self._ctx
@@ -96,8 +96,8 @@ class Stefan(commands.Bot):
         stefan.is_playing = False
 
         if not self._is_handle_playlist_change_called:
-            self._handle_playlist_change()
-
+            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
+            
     def make_queue_embed(self):
         time_scaling = config.get("nightcore_tempo") if config.get("nightcore") else 1
 
@@ -140,7 +140,7 @@ async def prefix(ctx, new_prefix):
     """ TODO: Write docstring """
 
     stefan.command_prefix = new_prefix
-    config.set("prefix", new_prefix)
+    await config.set("prefix", new_prefix)
 
     await ctx.message.channel.send("Tack för mitt nya prefix! 🥰")
 
@@ -220,17 +220,20 @@ async def hjälp(ctx):
     await ctx.send(embed=embed)
 
 
-def play_next(ctx, e):
+def play_next(ctx, e, loop):
     if e:
         print(f"Error: play_next(): {e}")
         return
 
+    asyncio.run_coroutine_threadsafe(play_next_async(ctx), loop)
+
+async def play_next_async(ctx):
     if stefan.queue.get_current_index() == stefan.queue.num_songs() and not (config.get("is_looping_queue") or config.get("is_looping_song")):
         stefan.music_stop(ctx)    
     
     elif stefan.is_playing:
         if not config.get("is_looping_song"):
-            stefan.queue.next()
+            await stefan.queue.next()
         stefan.music_play(ctx)
     
 
@@ -238,7 +241,7 @@ def play_next(ctx, e):
 async def next(ctx):
     """ TODO: Write docstring """
     if not (stefan.queue.get_current_index() == stefan.queue.num_songs() and not config.get("is_looping_queue")):
-        stefan.queue.next()
+        await stefan.queue.next()
         stefan.music_play()
     else:
         stefan.music_stop()
@@ -248,7 +251,7 @@ async def next(ctx):
 async def prev(ctx):
     """ TODO: Write docstring """
     if not (stefan.queue.get_current_index() == 1 and not config.get("is_looping_queue")):
-        stefan.queue.prev()
+        await stefan.queue.prev()
         stefan.music_play()
     else:
         stefan.music_stop()
@@ -261,12 +264,12 @@ async def play(ctx, *args):
     if len(args) == 1 and args[0].startswith(('http', 'www')):
         # Assume user provided url
         message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
-        stefan.queue.add_song_from_url(args[0])
+        await stefan.queue.add_song_from_url(args[0])
         await message.delete(delay=stefan.message_delete_delay)
     elif len(args) >= 1:
         # Assume user provided a string to search for on youtube
         message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
-        stefan.queue.add_song_from_query(' '.join(args))
+        await stefan.queue.add_song_from_query(' '.join(args))
         await message.delete(delay=stefan.message_delete_delay)
 
     if stefan.queue.num_songs() == 0:
@@ -295,7 +298,7 @@ async def clear(ctx):
     """ TODO: Write docstring """    
 
     stefan.music_stop()
-    stefan.queue.clear()
+    await stefan.queue.clear()
 
 
 @stefan.command()
@@ -304,7 +307,7 @@ async def remove(ctx, index: int):
 
     removed_current_song = stefan.queue.get_current_index() == index
 
-    stefan.queue.remove(index)
+    await stefan.queue.remove(index)
 
     if stefan.queue.num_songs() > 0:
 
@@ -319,7 +322,7 @@ async def remove(ctx, index: int):
 async def move(ctx, index):
     """ TODO: Write docstring """    
 
-    stefan.queue.move(int(index))
+    await stefan.queue.move(int(index))
 
     if stefan.queue.num_songs() > 0:
         stefan.music_play()
@@ -329,7 +332,7 @@ async def move(ctx, index):
 async def shuffle(ctx):
     """ TODO: Write docstring """    
 
-    stefan.queue.shuffle()
+    await stefan.queue.shuffle()
     stefan.music_play()
 
 
@@ -338,16 +341,16 @@ async def loopa(ctx, arg1=""):
     """ TODO: Write docstring """ 
 
     if arg1 in ["sång", "låt", "stycke"]:
-        config.toggle('is_looping_song')
+        await config.toggle('is_looping_song')
     elif arg1 in ["kö", "lista"] or True:
-        config.toggle('is_looping_queue')
+        await config.toggle('is_looping_queue')
 
 
 @stefan.command()
 async def nightcore(ctx):
     """ TODO: Write docstring """    
 
-    config.toggle('nightcore')
+    await config.toggle('nightcore')
 
 
 @stefan.command()
