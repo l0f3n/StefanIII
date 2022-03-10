@@ -26,6 +26,7 @@ class Stefan(commands.Bot):
 
         self.is_playing = False
         self.latest_queue_message = None
+        self.queue_message_lock = asyncio.Lock()
         self.message_delete_delay = config.get("message_delete_delay")
 
         self.before_invoke(self._handle_before_invoke)
@@ -40,8 +41,9 @@ class Stefan(commands.Bot):
         if not self.is_playing and self.queue.num_songs() == 1:
             self.music_play()
         
-        if self.latest_queue_message:
-            await stefan.latest_queue_message.edit(content=None, embed=self.make_queue_embed())
+        async with self.queue_message_lock:
+            if self.latest_queue_message:
+                await stefan.latest_queue_message.edit(content=None, embed=self.make_queue_embed())
             
         self._is_handle_playlist_change_called = False
 
@@ -365,10 +367,11 @@ async def playlists(ctx):
 @stefan.command()
 async def kö(ctx, name=None):
     
-    if stefan.latest_queue_message:
-        await stefan.latest_queue_message.delete()
+    async with stefan.queue_message_lock:
+        if stefan.latest_queue_message:
+            await stefan.latest_queue_message.delete()
     
-    stefan.latest_queue_message = await ctx.send(embed=stefan.make_queue_embed())
+        stefan.latest_queue_message = await ctx.send(embed=stefan.make_queue_embed())
 
 
 @stefan.command()

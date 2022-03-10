@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 import json
 from pathlib import Path
@@ -70,6 +71,7 @@ class Queue:
             if 'entries' in info:
                 for entry_info in info['entries']:
                     await self._add_song_from_info(entry_info)
+                    await asyncio.sleep(0)
             else:
                 await self._add_song_from_info(info)
 
@@ -91,6 +93,7 @@ class Queue:
         elif item_type == "playlist":
             for track in spotify.playlist(item_id)['tracks']['items']:
                 await self.add_song_from_query(self._spotify_query_string(track['track']))
+                await asyncio.sleep(0)
 
     async def add_song_from_query(self, query: str):
         
