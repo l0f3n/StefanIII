@@ -53,7 +53,7 @@ class Queue:
         else:
             self.add_song_from_youtube_url(url)
     
-    def add_song_from_youtube_url(self, url, notify=True):
+    def add_song_from_youtube_url(self, url):
         YDL_OPTIONS = {
             **Queue.COMMON_YDL_OPTIONS,
         }
@@ -73,9 +73,6 @@ class Queue:
             else:
                 self._add_song_from_info(info)
 
-        if notify:
-            self._notify()
-
     def _spotify_query_string(self, track):
         return track['name'] + ' - ' + track['artists'][0]['name']
 
@@ -90,6 +87,7 @@ class Queue:
         
         if item_type == "track":
             self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
+
         elif item_type == "playlist":
             for track in spotify.playlist(item_id)['tracks']['items']:
                 self.add_song_from_query(self._spotify_query_string(track['track']))
@@ -112,8 +110,6 @@ class Queue:
             
             if 'entries' in info:
                 self._add_song_from_info(info['entries'][0])
-        
-        self._notify()
 
     def _add_song_from_info(self, info):
 
@@ -129,6 +125,8 @@ class Queue:
             "source": info.get('url'), 
             "duration": info.get("duration")
         })
+
+        self._notify()
 
     def _sanitize_title(self, title):
         """
@@ -258,12 +256,11 @@ class Queue:
 
         if time_since_updated > dt.timedelta(hours=4):
             for song in playlists[name]['songs']:
-                self.add_song_from_youtube_url(song['url'], notify=False)
+                self.add_song_from_youtube_url(song['url'])
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])
-        
-        self._notify()
+            self._notify()
         
         return True
 
