@@ -304,12 +304,16 @@ async def clear(ctx):
 
 
 @stefan.command()
-async def remove(ctx, index: int):
+async def remove(ctx, *indexes):
     """ TODO: Write docstring """    
 
-    removed_current_song = stefan.queue.get_current_index() == index
-
-    await stefan.queue.remove(index)
+    # Remove the songs back to front so that we remove the correct song, 
+    # otherwise we would remove a song before another one and its index 
+    # would change causing us to remove the wrong one.
+    removed_current_song = False
+    for index in sorted(indexes, reverse=True):
+        removed_current_song = removed_current_song or (stefan.queue.get_current_index() == int(index))
+        await stefan.queue.remove(int(index))
 
     if stefan.queue.num_songs() > 0:
 
@@ -386,7 +390,7 @@ async def load(ctx, name):
     
     was_empty_before = stefan.queue.num_songs() == 0
 
-    stefan.queue.load(name)
+    await stefan.queue.load(name)
 
     if was_empty_before or not stefan.is_playing:
         stefan.music_play()
