@@ -18,6 +18,7 @@ class Config:
         "nightcore": False,
         "nightcore_tempo": 1.2,
         "nightcore_pitch": 1.25,
+        "queue_message_threshold": 5,
     }
 
     def __init__(self, path: str):

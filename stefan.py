@@ -36,6 +36,9 @@ class Stefan(commands.Bot):
         self._ctx = None
         self._is_handle_playlist_change_called = False
 
+        self._queue_message_threshold = config.get('queue_message_threshold')
+        self.current_message_count = 5
+
     async def _handle_playlist_change(self):
         self._is_handle_playlist_change_called = True
 
@@ -44,15 +47,20 @@ class Stefan(commands.Bot):
             self.music_play()
         
         async with self.queue_message_lock:
-            if self.latest_queue_message:
-                await stefan.latest_queue_message.delete()
+            if self.current_message_count >= self._queue_message_threshold:
+                self.current_message_count = 0
+                if self.latest_queue_message:
+                    await stefan.latest_queue_message.delete()
                 self.latest_queue_message = await self.latest_context.send(embed=self.make_queue_embed())
+            elif self.latest_queue_message:
+                await self.latest_queue_message.edit(content=None, embed=self.make_queue_embed())
             
         self._is_handle_playlist_change_called = False
 
     async def _handle_before_invoke(self, ctx):
         self._ctx = ctx
         self.latest_context = ctx
+        self.current_message_count += 1
         await ctx.message.add_reaction("👌")
 
     async def _handle_after_invoke(self, ctx):
@@ -393,6 +401,7 @@ async def playlists(ctx):
 async def kö(ctx, name=None):
     
     async with stefan.queue_message_lock:
+        stefan.current_message_count = 0
         if stefan.latest_queue_message:
             await stefan.latest_queue_message.delete()
     
