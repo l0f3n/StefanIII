@@ -94,6 +94,11 @@ class Queue:
             for track in spotify.playlist(item_id)['tracks']['items']:
                 await self.add_song_from_query(self._spotify_query_string(track['track']))
                 await asyncio.sleep(0)
+        
+        elif item_type == "album":
+            for track in spotify.album_tracks(item_id)['tracks']['items']:
+                await self.add_song_from_query(self._spotify_query_string(track))
+                await asyncio.sleep(0)
 
     async def add_song_from_query(self, query: str):
         
