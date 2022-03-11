@@ -264,7 +264,8 @@ class Queue:
 
         if time_since_updated > dt.timedelta(hours=4):
             for song in playlists[name]['songs']:
-                self.add_song_from_youtube_url(song['url'])
+                await self.add_song_from_youtube_url(song['url'])
+                await asyncio.sleep(0)
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])

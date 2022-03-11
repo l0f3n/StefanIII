@@ -387,10 +387,8 @@ async def save(ctx, name, desc=None):
 @stefan.command()
 async def load(ctx, name):
     """ TODO: Write docstring """
-    
-    was_empty_before = stefan.queue.num_songs() == 0
 
     await stefan.queue.load(name)
 
-    if was_empty_before or not stefan.is_playing:
+    if not stefan.is_playing:
         stefan.music_play()
