@@ -305,15 +305,13 @@ class Queue:
             title = title if len(title) < title_max_len else title[:title_max_len-3] + '...'
 
             # Format song time
-            time = str(dt.timedelta(seconds=int(song['duration']/time_scaling)))
-            time = '0' + time if len(time) == 7 else time
+            time = format_time(int(song['duration']/time_scaling))
 
             entry = f"{index:<{index_len}} {title:<{title_len}} [{time}]"
 
             if i == self._prepare_index_(self.current):
                 # Format current song time
-                current_time = str(dt.timedelta(seconds=int(current_music_time)))
-                current_time = '0' + current_time if len(current_time) == 7 else current_time
+                current_time = format_time(int(current_music_time))
 
                 entry = f"--> {entry} ({current_time})"
             else:
