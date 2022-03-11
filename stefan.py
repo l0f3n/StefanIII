@@ -39,6 +39,7 @@ class Stefan(commands.Bot):
         self._is_handle_playlist_change_called = True
 
         if not self.is_playing and self.queue.num_songs() == 1:
+            await self.join_channel()
             self.music_play()
         
         async with self.queue_message_lock:
@@ -99,6 +100,20 @@ class Stefan(commands.Bot):
 
         if not self._is_handle_playlist_change_called:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
+
+    async def join_channel(self):
+        """
+        Joins the users channel given the current context.
+        """
+        if not self._ctx:
+            return
+        
+        if self._ctx.author and self._ctx.author.voice:
+            if self._ctx.guild and self._ctx.guild.voice_client:
+                if self._ctx.author.voice.channel != self._ctx.guild.voice_client.channel:
+                    await self._ctx.guild.voice_client.move_to(self._ctx.author.voice.channel)
+            else:
+                await self._ctx.author.voice.channel.connect()
             
     def make_queue_embed(self):
         time_scaling = config.get("nightcore_tempo") if config.get("nightcore") else 1
@@ -277,15 +292,8 @@ async def play(ctx, *args):
     if stefan.queue.num_songs() == 0:
         return
 
-    # Move bot to users channel
-    if ctx.author.voice:
-        if ctx.guild.voice_client:
-            if ctx.author.voice.channel != ctx.guild.voice_client.channel:
-                await ctx.guild.voice_client.move_to(ctx.author.voice.channel)
-        else:
-            await ctx.author.voice.channel.connect()
-
     if not stefan.is_playing or len(args) == 0:
+        stefan.join_channel()
         stefan.music_play()
 
 
@@ -403,4 +411,5 @@ async def load(ctx, name):
     await stefan.queue.load(name)
 
     if not stefan.is_playing:
+        await stefan.join_channel()
         stefan.music_play()
