@@ -29,7 +29,6 @@ class Stefan(commands.Bot):
         self.latest_queue_message = None
         self.latest_context = None
         self.queue_message_lock = asyncio.Lock()
-        self.message_delete_delay = config.get("message_delete_delay")
 
         self.before_invoke(self._handle_before_invoke)
         self.after_invoke(self._handle_after_invoke)
@@ -37,11 +36,9 @@ class Stefan(commands.Bot):
         self._ctx = None
         self._is_handle_playlist_change_called = False
 
-        self._queue_message_threshold = config.get('queue_message_threshold')
         self.current_message_count = 5
 
         self._current_music_start_time = dt.datetime.now()
-        self._music_time_update_interval = config.get('music_time_update_interval')
 
     async def _handle_playlist_change(self):
         self._is_handle_playlist_change_called = True
@@ -51,7 +48,7 @@ class Stefan(commands.Bot):
             self.music_play()
         
         async with self.queue_message_lock:
-            if self.current_message_count >= self._queue_message_threshold:
+            if self.current_message_count >= config.get('queue_message_threshold'):
                 self.current_message_count = 0
 
                 if self.latest_queue_message:
@@ -138,7 +135,7 @@ class Stefan(commands.Bot):
     
     async def update_music_time(self):
         while True:        
-            await asyncio.sleep(self._music_time_update_interval)
+            await asyncio.sleep(config.get('music_time_update_interval'))
             
             if not self.is_playing:
                 break
@@ -312,12 +309,12 @@ async def play(ctx, *args):
         # Assume user provided url
         message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
         await stefan.queue.add_song_from_url(args[0])
-        await message.delete(delay=stefan.message_delete_delay)
+        await message.delete(delay=config.get("message_delete_delay"))
     elif len(args) >= 1:
         # Assume user provided a string to search for on youtube
         message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
         await stefan.queue.add_song_from_query(' '.join(args))
-        await message.delete(delay=stefan.message_delete_delay)
+        await message.delete(delay=config.get("message_delete_delay"))
 
     if stefan.queue.num_songs() == 0:
         return
