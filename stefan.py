@@ -43,9 +43,11 @@ class Stefan(commands.Bot):
     async def _handle_playlist_change(self):
         self._is_handle_playlist_change_called = True
 
-        if not self.is_playing and self.queue.num_songs() == 1:
-            await self.join_channel()
-            self.music_play()
+        if not self.is_playing:
+            self._current_music_start_time = dt.datetime.now()
+            if self.queue.num_songs() == 1:
+                await self.join_channel()
+                self.music_play()
         
         async with self.queue_message_lock:
             if self.current_message_count >= config.get('queue_message_threshold'):
