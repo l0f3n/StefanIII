@@ -273,7 +273,7 @@ class Queue:
         
         return True
 
-    def playlist_string(self, title_max_len, before_current, after_current, time_scaling=1):
+    def playlist_string(self, title_max_len, before_current, after_current, current_music_time, time_scaling=1):
         if not self.playlist:
             return ""
 
@@ -296,7 +296,6 @@ class Queue:
         entries = []
 
         for i, song in enumerate(self.playlist[start:end], start=self._prepare_index_(start)):
-            duration = int(song['duration']/time_scaling)
 
             # Format song index
             index = str(i) + ':'
@@ -306,15 +305,19 @@ class Queue:
             title = title if len(title) < title_max_len else title[:title_max_len-3] + '...'
 
             # Format song time
-            time = str(dt.timedelta(seconds=duration))
+            time = str(dt.timedelta(seconds=int(song['duration']/time_scaling)))
             time = '0' + time if len(time) == 7 else time
 
             entry = f"{index:<{index_len}} {title:<{title_len}} [{time}]"
 
             if i == self._prepare_index_(self.current):
-                entry = f"--> {entry} <--"
+                # Format current song time
+                current_time = str(dt.timedelta(seconds=int(current_music_time)))
+                current_time = '0' + current_time if len(current_time) == 7 else current_time
+
+                entry = f"--> {entry} ({current_time})"
             else:
-                entry = f"    {entry}    "
+                entry = f"    {entry}"
 
             entries.append(entry)
         

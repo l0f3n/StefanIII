@@ -1,4 +1,5 @@
 import asyncio
+import datetime as dt
 import discord
 from discord import Embed, Color, FFmpegPCMAudio
 from discord.ext import commands
@@ -39,6 +40,9 @@ class Stefan(commands.Bot):
         self._queue_message_threshold = config.get('queue_message_threshold')
         self.current_message_count = 5
 
+        self._current_music_start_time = dt.datetime.now()
+        self._music_time_update_interval = config.get('music_time_update_interval')
+
     async def _handle_playlist_change(self):
         self._is_handle_playlist_change_called = True
 
@@ -49,9 +53,12 @@ class Stefan(commands.Bot):
         async with self.queue_message_lock:
             if self.current_message_count >= self._queue_message_threshold:
                 self.current_message_count = 0
+
                 if self.latest_queue_message:
-                    await stefan.latest_queue_message.delete()
+                    await self.latest_queue_message.delete()
+
                 self.latest_queue_message = await self.latest_context.send(embed=self.make_queue_embed())
+
             elif self.latest_queue_message:
                 await self.latest_queue_message.edit(content=None, embed=self.make_queue_embed())
             
@@ -91,7 +98,11 @@ class Stefan(commands.Bot):
             source = FFmpegPCMAudio(stefan.queue.current_song_source(), **ffmpeg_options)
             ctx.voice_client.play(source, after=lambda e: play_next(ctx, e, self.loop))
 
-        stefan.is_playing = True
+        self._current_music_start_time = dt.datetime.now()
+
+        if not self.is_playing:
+            self.is_playing = True
+            asyncio.run_coroutine_threadsafe(self.update_music_time(), self.loop)
 
         if not self._is_handle_playlist_change_called:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
@@ -105,7 +116,8 @@ class Stefan(commands.Bot):
         if ctx.voice_client.is_playing():
             ctx.voice_client.stop()
 
-        stefan.is_playing = False
+        self.is_playing = False
+        self._current_music_start_time = dt.datetime.now()
 
         if not self._is_handle_playlist_change_called:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
@@ -123,11 +135,20 @@ class Stefan(commands.Bot):
                     await self._ctx.guild.voice_client.move_to(self._ctx.author.voice.channel)
             else:
                 await self._ctx.author.voice.channel.connect()
+    
+    async def update_music_time(self):
+        while True:        
+            await asyncio.sleep(self._music_time_update_interval)
             
+            if not self.is_playing:
+                break
+            
+            await self._handle_playlist_change()
+
     def make_queue_embed(self):
         time_scaling = config.get("nightcore_tempo") if config.get("nightcore") else 1
 
-        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"), time_scaling)
+        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"), (dt.datetime.now() - self._current_music_start_time).total_seconds(), time_scaling)
 
         playing = "✓" if stefan.is_playing else "✗"
 
@@ -255,7 +276,7 @@ def play_next(ctx, e, loop):
 
 async def play_next_async(ctx):
     if stefan.queue.get_current_index() == stefan.queue.num_songs() and not (config.get("is_looping_queue") or config.get("is_looping_song")):
-        stefan.music_stop(ctx)    
+        stefan.music_stop(ctx)
     
     elif stefan.is_playing:
         if not config.get("is_looping_song"):
