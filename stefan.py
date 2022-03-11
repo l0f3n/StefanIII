@@ -432,10 +432,13 @@ async def nightcore(ctx):
 
     if config.get('nightcore'):
         # If we previously played normally, we need go backward
-        stefan.music_seek(stefan.music_current_elapsed_time()/stefan.music_nightcore_time_scale())
+        seek_time = stefan.music_current_elapsed_time()/stefan.music_nightcore_time_scale()
     else:
         # And if we previously played nightcore, we need to go forward
-        stefan.music_seek(stefan.music_current_elapsed_time()*stefan.music_nightcore_time_scale())
+        seek_time = stefan.music_current_elapsed_time()*stefan.music_nightcore_time_scale()
+
+    stefan.music_seek(seek_time)
+    stefan._current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=seek_time)
 
 
 @stefan.command()
