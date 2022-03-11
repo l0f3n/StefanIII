@@ -294,7 +294,7 @@ async def play(ctx, *args):
         return
 
     if not stefan.is_playing or len(args) == 0:
-        stefan.join_channel()
+        await stefan.join_channel()
         stefan.music_play()
 
 
