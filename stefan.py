@@ -304,8 +304,20 @@ async def clear(ctx):
 
 
 @stefan.command()
-async def remove(ctx, *indexes):
+async def remove(ctx, *args):
     """ TODO: Write docstring """    
+
+    # Expand every 'x:y' entry to x, x+1, ..., y-1, y. Ignore incorrect ranges
+    indexes = []
+    for arg in args:
+        if ':' in arg:
+            start, end = [int(x) for x in arg.split(':')]
+            if start > end:
+                continue
+            for i in range(start, end+1):
+                indexes.append(i)
+        else:
+            indexes.append(int(arg))
 
     # Remove the songs back to front so that we remove the correct song, 
     # otherwise we would remove a song before another one and its index 
