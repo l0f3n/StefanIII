@@ -332,9 +332,9 @@ async def remove(ctx, *args):
     # otherwise we would remove a song before another one and its index 
     # would change causing us to remove the wrong one.
     removed_current_song = False
-    for index in sorted(indexes, reverse=True):
+    for index in filter(lambda x: 0 <= x <= stefan.queue.num_songs(), sorted(indexes, reverse=True)):
         removed_current_song = removed_current_song or (stefan.queue.get_current_index() == int(index))
-        await stefan.queue.remove(int(index))
+        await stefan.queue.remove(index)
 
     if stefan.queue.num_songs() > 0:
 
@@ -409,8 +409,6 @@ async def save(ctx, name, desc=None):
 async def load(ctx, name):
     """ TODO: Write docstring """
     
-    was_empty_before = stefan.queue.num_songs() == 0
-
     await stefan.queue.load(name)
 
     if not stefan.is_playing:
