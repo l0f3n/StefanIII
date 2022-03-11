@@ -85,14 +85,12 @@ class Stefan(commands.Bot):
             print("Error: Cant't play music, bot is not connected to voice")
             return
 
-        ffmpeg_options = Stefan._FFMPEG_NIGHTCORE_OPTIONS if config.get("nightcore") else Stefan._FFMPEG_OPTIONS
-
         if ctx.voice_client.is_playing():
             # Just change audio source if we are currently playing something else
-            ctx.voice_client.source = FFmpegPCMAudio(stefan.queue.current_song_source(), **ffmpeg_options)
+            ctx.voice_client.source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_settings())
         else:
             # Otherwise start playing as normal
-            source = FFmpegPCMAudio(stefan.queue.current_song_source(), **ffmpeg_options)
+            source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_settings())
             ctx.voice_client.play(source, after=lambda e: play_next(ctx, e, self.loop))
 
         self._current_music_start_time = dt.datetime.now()
@@ -119,6 +117,35 @@ class Stefan(commands.Bot):
         if not self._is_handle_playlist_change_called:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
 
+    def music_seek(self, time):
+        if not self.is_playing:
+            print("Warn: Can't seek when not playing any music")
+            return
+        
+        source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_settings())
+        
+        read_time = 0
+        while source.read() and read_time < time*1000:
+            read_time += 20
+
+        self._ctx.voice_client.source = source
+        self._current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=time)
+
+    def music_current_elapsed_time(self):
+        return (dt.datetime.now() - self._current_music_start_time).total_seconds()
+
+    def music_current_time_scale(self):
+        return self.music_nightcore_time_scale() if config.get("nightcore") else 1
+
+    def music_nightcore_time_scale(self):
+        # TODO: This is currently incorrect, since nightcore_tempo is not 
+        # enough to know how much the song is speed up. Its speed is also 
+        # increased from the increased pitch, which need to be accounted for.
+        return config.get("nightcore_tempo")
+
+    def music_current_ffmpeg_settings(self):
+        return Stefan._FFMPEG_NIGHTCORE_OPTIONS if config.get("nightcore") else Stefan._FFMPEG_OPTIONS
+
     async def join_channel(self):
         """
         Joins the users channel given the current context.
@@ -143,9 +170,7 @@ class Stefan(commands.Bot):
             await self._handle_playlist_change()
 
     def make_queue_embed(self):
-        time_scaling = config.get("nightcore_tempo") if config.get("nightcore") else 1
-
-        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"), (dt.datetime.now() - self._current_music_start_time).total_seconds(), time_scaling)
+        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"), self.music_current_elapsed_time(), self.music_current_time_scale())
 
         playing = "✓" if stefan.is_playing else "✗"
 
@@ -158,7 +183,7 @@ class Stefan(commands.Bot):
         else:
             looping = "✓" if config.get("is_looping_queue") else "✗"
             
-        time = str(self.queue.duration(time_scaling))
+        time = str(self.queue.duration(self.music_current_time_scale()))
 
         info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {stefan.queue.num_songs()}⠀Längd: {time}\n"
 
@@ -405,6 +430,13 @@ async def nightcore(ctx):
 
     await config.toggle('nightcore')
 
+    if config.get('nightcore'):
+        # If we previously played normally, we need go backward
+        stefan.music_seek(stefan.music_current_elapsed_time()/stefan.music_nightcore_time_scale())
+    else:
+        # And if we previously played nightcore, we need to go forward
+        stefan.music_seek(stefan.music_current_elapsed_time()*stefan.music_nightcore_time_scale())
+
 
 @stefan.command()
 async def playlists(ctx):
@@ -424,6 +456,12 @@ async def kö(ctx, name=None):
             await stefan.latest_queue_message.delete()
     
         stefan.latest_queue_message = await ctx.send(embed=stefan.make_queue_embed())
+
+
+@stefan.command()
+async def seek(ctx, time):
+    
+    stefan.music_seek(int(time))
 
 
 @stefan.command()
