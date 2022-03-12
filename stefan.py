@@ -15,7 +15,7 @@ class Stefan(commands.Bot):
 
     _FFMPEG_NIGHTCORE_OPTIONS = {
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
-        'options': f'-af atempo={config.get("nightcore_tempo")},asetrate=44100*{config.get("nightcore_pitch")} -vn'
+        'options': f'-af atempo={config.get("nightcore_tempo")},asetrate=48000*{config.get("nightcore_pitch")} -vn'
     }
     
     def __init__(self, *args, **kwargs):
@@ -140,10 +140,9 @@ class Stefan(commands.Bot):
         return self.music_nightcore_time_scale() if config.get("nightcore") else 1
 
     def music_nightcore_time_scale(self):
-        # TODO: This is currently incorrect, since nightcore_tempo is not 
-        # enough to know how much the song is speed up. Its speed is also 
-        # increased from the increased pitch, which need to be accounted for.
-        return config.get("nightcore_tempo")
+        # Using asetrate in ffmpeg apparently changes the duration of song as
+        # well, so we need to multiply these.
+        return config.get("nightcore_tempo")*config.get("nightcore_pitch")
 
     def music_current_ffmpeg_settings(self):
         return Stefan._FFMPEG_NIGHTCORE_OPTIONS if config.get("nightcore") else Stefan._FFMPEG_OPTIONS
