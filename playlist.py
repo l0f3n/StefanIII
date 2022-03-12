@@ -324,15 +324,15 @@ class Queue:
             # Format song time
             time = format_time(int(song['duration']/time_scaling))
 
-            entry = f"{index:<{index_len}} {title:<{title_len}} [{time}]"
+            entry = f"{index:<{index_len}} {title:<{title_len}}"
 
             if i == self._prepare_index_(self.current):
                 # Format current song time
                 current_time = format_time(int(current_music_time))
 
-                entry = f"--> {entry} ({current_time})"
+                entry = f"{entry} [{current_time} / {time}]"
             else:
-                entry = f"    {entry}"
+                entry = f"{entry} [-------- / {time}]"
 
             entries.append(entry)
         
