@@ -79,26 +79,37 @@ class Queue:
         return track['name'] + ' - ' + track['artists'][0]['name']
 
     async def add_song_from_spotify_url(self, url: str):
+        spotify_id = config.get("spotify_id", allow_default=False)
+        spotify_secret = config.get("spotify_secret", allow_default=False)
+        
+        if not spotify_id or not spotify_secret:
+            print("Error: Can't add song from Spotify, please add your credentials to 'config.json'")
+            return
+
         spotify = spotipy.Spotify(
                     auth_manager=SpotifyClientCredentials(
-                        client_id=config.get("spotify_id"), 
-                        client_secret=config.get("spotify_secret")))
+                        client_id=spotify_id, 
+                        client_secret=spotify_secret))
         
         parsed_url = url.replace("https://open.spotify.com/", "")
         item_type, item_id = parsed_url.split("/")
         
-        if item_type == "track":
-            await self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
+        try:
+            if item_type == "track":
+                await self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
 
-        elif item_type == "playlist":
-            for track in spotify.playlist(item_id)['tracks']['items']:
-                await self.add_song_from_query(self._spotify_query_string(track['track']))
-                await asyncio.sleep(0)
-        
-        elif item_type == "album":
-            for track in spotify.album_tracks(item_id)['tracks']['items']:
-                await self.add_song_from_query(self._spotify_query_string(track))
-                await asyncio.sleep(0)
+            elif item_type == "playlist":
+                for track in spotify.playlist(item_id)['tracks']['items']:
+                    await self.add_song_from_query(self._spotify_query_string(track['track']))
+                    await asyncio.sleep(0)
+            
+            elif item_type == "album":
+                for track in spotify.album_tracks(item_id)['tracks']['items']:
+                    await self.add_song_from_query(self._spotify_query_string(track))
+                    await asyncio.sleep(0)
+        except spotipy.oauth2.SpotifyOauthError:
+            print("Error: Something went wrong when using Spotify credentials")
+            return
 
     async def add_song_from_query(self, query: str):
         

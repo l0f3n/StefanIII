@@ -33,8 +33,12 @@ class Config:
     def add_on_update_callback(self, callback):
         self._on_update_callbacks.append(callback)
     
-    def get(self, key: str):
+    def get(self, key: str, allow_default=True):
         if key in self.config:
+
+            if not allow_default and self.config[key] == Config.DEFAULT[key]:
+                return None
+
             return self.config[key]
         else:
             print(f"Error: No config with key '{key}' exists.")
