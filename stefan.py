@@ -479,8 +479,8 @@ async def save(ctx, name, desc=None):
 async def load(ctx, name):
     """ TODO: Write docstring """
     
-    await stefan.queue.load(name)
+    success = await stefan.queue.load(name)
 
-    if not stefan.is_playing:
+    if success and not stefan.is_playing:
         await stefan.join_channel()
         stefan.music_play()
