@@ -8,14 +8,13 @@ from config import config
 import playlist
 
 class Stefan(commands.Bot):
-    _FFMPEG_OPTIONS = {
-        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
-        'options': '-vn'
+    _FFMPEG_COMMON_OPTIONS = {
+        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     }
-
-    _FFMPEG_NIGHTCORE_OPTIONS = {
-        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 
-        'options': f'-af atempo={config.get("nightcore_tempo")},asetrate=48000*{config.get("nightcore_pitch")} -vn'
+    
+    _FFMPEG_STANDARD_OPTIONS = {
+        **_FFMPEG_COMMON_OPTIONS,
+        'options': '-vn'
     }
     
     def __init__(self, *args, **kwargs):
@@ -89,10 +88,10 @@ class Stefan(commands.Bot):
 
         if ctx.voice_client.is_playing():
             # Just change audio source if we are currently playing something else
-            ctx.voice_client.source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_settings())
+            ctx.voice_client.source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_options())
         else:
             # Otherwise start playing as normal
-            source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_settings())
+            source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_options())
             ctx.voice_client.play(source, after=lambda e: play_next(ctx, e, self.loop))
 
         self._current_music_start_time = dt.datetime.now()
@@ -124,7 +123,7 @@ class Stefan(commands.Bot):
             print("Warn: Can't seek when not playing any music")
             return
         
-        source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_settings())
+        source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_options())
         
         read_time = 0
         while source.read() and read_time < time*1000:
@@ -144,8 +143,18 @@ class Stefan(commands.Bot):
         # well, so we need to multiply these.
         return config.get("nightcore_tempo")*config.get("nightcore_pitch")
 
-    def music_current_ffmpeg_settings(self):
-        return Stefan._FFMPEG_NIGHTCORE_OPTIONS if config.get("nightcore") else Stefan._FFMPEG_OPTIONS
+    def music_current_ffmpeg_options(self):
+        if not config.get('nightcore'):
+            return Stefan._FFMPEG_STANDARD_OPTIONS
+        else:
+            freq = self.queue.current_song()['asr']
+
+            _FFMPEG_NIGHTCORE_OPTIONS = {
+                **Stefan._FFMPEG_COMMON_OPTIONS,
+                'options': f'-af atempo={config.get("nightcore_tempo")},asetrate={freq}*{config.get("nightcore_pitch")} -vn'
+            }
+
+            return _FFMPEG_NIGHTCORE_OPTIONS
 
     async def join_channel(self):
         """
@@ -439,7 +448,6 @@ async def nightcore(ctx):
         seek_time = stefan.music_current_elapsed_time()*stefan.music_nightcore_time_scale()
 
     stefan.music_seek(seek_time)
-    stefan._current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=seek_time)
 
 
 @stefan.command()

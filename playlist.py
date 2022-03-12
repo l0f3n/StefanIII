@@ -113,7 +113,7 @@ class Queue:
             # We don't get any info when we (probably among other things) don't
             # get any search result for the query. Just ignore it then.
             if not info:
-                print("Warning: No info found for the specified url")
+                print(f"Warn: No search results found for query '{query}'")
                 return
             
             if 'entries' in info:
@@ -131,7 +131,8 @@ class Queue:
             "title": self._sanitize_title(info.get('title')), 
             "url": info.get('original_url'), 
             "source": info.get('url'), 
-            "duration": info.get("duration")
+            "duration": info.get("duration"),
+            "asr": info.get('asr'),
         })
 
         await self._notify()
@@ -195,6 +196,11 @@ class Queue:
         assert 0 <= self.current < len(self.playlist), "Invalid song index"
 
         return self.playlist[self.current]['source']
+    
+    def current_song(self):
+        assert 0 <= self.current < len(self.playlist), "Invalid song index"
+
+        return self.playlist[self.current]
 
     def get_playlists(self):
         if not Path(Queue.PLAYLISTS_PATH).exists():
