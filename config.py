@@ -17,7 +17,7 @@ class Config:
         "message_delete_delay": 2, # Can be set to False to disable message deletion
         "nightcore": False,
         "nightcore_tempo": 1.2,
-        "nightcore_pitch": 1.25,
+        "nightcore_pitch": 1.15,
         "queue_message_threshold": 5,
         "music_time_update_interval": 5,
     }
