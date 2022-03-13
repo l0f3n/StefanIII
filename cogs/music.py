@@ -35,6 +35,7 @@ class Music(commands.Cog):
 
         self.is_playing = False
         self.current_music_start_time = dt.datetime.now()
+        self.current_music_paused_at = 0
 
         self._is_handling_change = False
 
@@ -53,7 +54,6 @@ class Music(commands.Cog):
         self._is_handling_change = True
         
         if not self.is_playing:
-            self.current_music_start_time = dt.datetime.now()
             if self.queue.num_songs() == 1:
                 await self.bot.join_channel()
                 self.play()
@@ -153,6 +153,8 @@ class Music(commands.Cog):
             self.is_playing = True
             asyncio.run_coroutine_threadsafe(self._update_music_time(), self.bot.loop)
 
+        self.seek(self.current_music_paused_at)
+
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
 
@@ -189,6 +191,21 @@ class Music(commands.Cog):
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
 
+    def pause(self, ctx=None):
+        ctx = ctx or self.bot.latest_context
+        
+        if not ctx or not ctx.voice_client:
+            return
+
+        if ctx.voice_client.is_playing():
+            ctx.voice_client.stop()
+
+        self.is_playing = False
+        self.current_music_paused_at = (dt.datetime.now() - self.current_music_start_time).total_seconds()
+
+        if not self._is_handling_change:
+            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
+
     def stop(self, ctx=None):
         ctx = ctx or self.bot.latest_context
         
@@ -200,6 +217,7 @@ class Music(commands.Cog):
 
         self.is_playing = False
         self.current_music_start_time = dt.datetime.now()
+        self.current_music_paused_at = 0
 
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
@@ -263,6 +281,10 @@ class Music(commands.Cog):
             seek_time = self.current_elapsed_time()*self.nightcore_time_scale()
 
         self.seek(seek_time)
+
+    @commands.command(name="pause", aliases=["pausa"])
+    async def _pause(self, ctx):
+        self.pause()
 
     @commands.command(name="play")
     async def _play(self, ctx, *args):
