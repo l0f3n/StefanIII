@@ -232,12 +232,18 @@ class Music(commands.Cog):
 
     @commands.command(name="clear", aliases=["töm", "rensa"])
     async def _clear(self, ctx):
+        """
+        Remove all songs in the queue.
+        """
 
         self.stop()
         await self.queue.clear()
 
     @commands.command(name="load", aliases=["ladda"])
     async def _load(self, ctx, name):
+        """
+        Load a previously saved playlist given its name.
+        """
         
         success = await self.queue.load(name)
 
@@ -245,9 +251,11 @@ class Music(commands.Cog):
             await self.bot.join_channel()
             self.play()
     
-    @commands.command(name="loopa", aliases=["snurra"])
+    @commands.command(name="loop", aliases=["loopa", "snurra"])
     async def _loop(self, ctx, arg1=""):
-        """ TODO: Write docstring """ 
+        """
+        Toggles looping of queue or song.
+        """
 
         if arg1 in ["sång", "låt", "stycke"]:
             await self.config.toggle('is_looping_song')
@@ -256,6 +264,9 @@ class Music(commands.Cog):
 
     @commands.command(name="move")
     async def _move(self, ctx, index):
+        """
+        Move to a song given its index.
+        """
 
         await self.queue.move(int(index))
 
@@ -264,6 +275,9 @@ class Music(commands.Cog):
 
     @commands.command(name="next")
     async def _next(self, ctx):
+        """
+        Move to the next song.
+        """
 
         if not (self.queue.get_current_index() == self.queue.num_songs() and not self.config.get("is_looping_queue")):
             await self.queue.next()
@@ -273,6 +287,9 @@ class Music(commands.Cog):
 
     @commands.command(name="nightcore")
     async def _nightcore(self, ctx):
+        """
+        Toggle nightcore mode, increasing pitch and speed of music.
+        """
 
         await self.config.toggle('nightcore')
 
@@ -287,10 +304,23 @@ class Music(commands.Cog):
 
     @commands.command(name="pause", aliases=["pausa"])
     async def _pause(self, ctx):
+        """
+        Pause the currently playing song at the current time.
+        """
+
         self.pause()
 
     @commands.command(name="play")
     async def _play(self, ctx, *args):
+        """
+        Start playing music.
+
+        If there is one argument that is a url it either imports a playlist 
+        or video from youtube, or playlist, album or track from spotify.
+
+        If there are multiple arguments or a single one that is not a url, it
+        searches it on youtube and adds the first result to the queue.
+        """
 
         if len(args) == 1 and args[0].startswith(('http', 'www')):
             # Assume user provided url
@@ -314,6 +344,10 @@ class Music(commands.Cog):
     
     @commands.command(name="playlists", aliases=["spellistor", 'pl', 'sp'])
     async def _playlists(self, ctx):
+        """
+        Lists all the saved playlists.
+        """
+
         embed=Embed(title="Spellistor:", color=Color.orange())
         for name, desc, songs in self.queue.get_playlists():
             noun = "låt" if len(songs) == 1 else "låtar"
@@ -322,6 +356,9 @@ class Music(commands.Cog):
     
     @commands.command(name="previous", aliases=["prev"])
     async def _previous(self, ctx):
+        """
+        Move to the previous song.
+        """
 
         if not (self.queue.get_current_index() == 1 and not self.config.get("is_looping_queue")):
             await self.queue.prev()
@@ -331,6 +368,10 @@ class Music(commands.Cog):
 
     @commands.command(name="queue", aliases=["kö"])
     async def _queue(self, ctx):
+        """
+        Shows the current queue, which will continuously update.
+        """
+
         async with self.queue_message_lock:
             self.messages_since_last_update = 0
             if self.queue_message:
@@ -340,6 +381,11 @@ class Music(commands.Cog):
 
     @commands.command(name="remove")
     async def _remove(self, ctx, *args):
+        """
+        Remove songs given one or multiple indexes.
+
+        Will inclusively remove every song between ranges given as x:y.
+        """
 
         # Expand every 'x:y' entry to x, x+1, ..., y-1, y. Ignore incorrect ranges
         indexes = []
@@ -367,21 +413,36 @@ class Music(commands.Cog):
 
     @commands.command(name="save", aliases=["spara"])
     async def _save(self, ctx, name, desc=None):
-        """ TODO: Write docstring """
+        """ 
+        Save the current queue as a playlist with the given name.
+        
+        Can optionally also take a description of the queue.
+        """
+        
         self.queue.save(name, desc)
 
     @commands.command(name="seek", aliases=["sök", "spoola"])
     async def _seek(self, ctx, time):
+        """
+        Skip to the given time in the current song.
+        """
 
         self.seek(int(time))
 
     @commands.command(name="shuffle", aliases=["slumpa", "skaka", "blanda", "stavmixa"])
     async def _shuffle(self, ctx):
+        """
+        Shuffle the current queue.
+        """
 
         await self.queue.shuffle()
         self.play()
 
     @commands.command(name="stop", aliases=["stoppa"])
     async def _stop(self, ctx):
+        """
+        Stop the current song.
+        """
+        
         self.stop()
     
