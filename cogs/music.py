@@ -123,7 +123,7 @@ class Music(commands.Cog):
         else:
             looping = "✓" if self.config.get("is_looping_queue") else "✗"
             
-        time = str(self.queue.duration(self.current_time_scale()))
+        time = self.queue.duration(self.current_time_scale())
 
         info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {self.queue.num_songs()}⠀Längd: {time}\n"
 

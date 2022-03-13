@@ -225,7 +225,11 @@ class Queue:
         return self.playlist
 
     def duration(self, time_scaling=1):
-        return format_time(int(sum(song["duration"]/time_scaling for song in self.playlist)))
+        total_seconds = int(sum(song["duration"]/time_scaling for song in self.playlist))
+        return format_time(total_seconds, show_hours=(total_seconds > 3600))
+
+    def _longest_song_between(self, start, end):
+        return max(song['duration'] for song in self.playlist[start:end])
 
     def save(self, name: str, desc: str = None) -> bool:
         if len(self.playlist) == 0:
@@ -312,6 +316,8 @@ class Queue:
 
         entries = []
 
+        show_hours = self._longest_song_between(start, end)/time_scaling > 3600
+
         for i, song in enumerate(self.playlist[start:end], start=self._prepare_index_(start)):
 
             # Format song index
@@ -322,17 +328,17 @@ class Queue:
             title = title if len(title) < title_max_len else title[:title_max_len-3] + '...'
 
             # Format song time
-            time = format_time(int(song['duration']/time_scaling))
+            time = format_time(int(song['duration']/time_scaling), show_hours=show_hours)
 
             entry = f"{index:<{index_len}} {title:<{title_len}}"
 
             if i == self._prepare_index_(self.current):
                 # Format current song time
-                current_time = format_time(int(current_music_time))
+                current_time = format_time(int(current_music_time), show_hours=show_hours)
 
                 entry = f"{entry} [{current_time} / {time}]"
             else:
-                entry = f"{entry} [-------- / {time}]"
+                entry = f"{entry} [-----{(show_hours*3)*'-'} / {time}]"
 
             entries.append(entry)
         
