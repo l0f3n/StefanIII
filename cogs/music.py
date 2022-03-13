@@ -353,12 +353,13 @@ class Music(commands.Cog):
             else:
                 indexes.append(int(arg))
 
+        removed_current_song = self.queue.get_current_index() in indexes
+
         await self.queue.remove(index for index in indexes if 1 <= index <= self.queue.num_songs())
 
         if self.queue.num_songs() > 0:
 
-            if self.queue.get_current_index() in indexes:
-                # We removed the current song so we need to play another one
+            if removed_current_song:
                 self.play()
 
         else:
