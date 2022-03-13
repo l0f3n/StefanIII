@@ -1,208 +1,58 @@
-import asyncio
-import datetime as dt
 import discord
-from discord import Embed, Color, FFmpegPCMAudio
+from discord import Embed, Color
 from discord.ext import commands
 
+from music import Music
 from config import config
-import playlist
 
 class Stefan(commands.Bot):
-    _FFMPEG_COMMON_OPTIONS = {
-        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    }
-    
-    _FFMPEG_STANDARD_OPTIONS = {
-        **_FFMPEG_COMMON_OPTIONS,
-        'options': '-vn'
-    }
     
     def __init__(self, *args, **kwargs):
         commands.Bot.__init__(self, *args, **kwargs)
 
-        self.queue = playlist.Queue()
-        self.queue.add_on_update_callback(self._handle_playlist_change)
-        config.add_on_update_callback(self._handle_playlist_change)
-
-        self.is_playing = False
-        self.latest_queue_message = None
+        self.current_context = None
         self.latest_context = None
-        self.queue_message_lock = asyncio.Lock()
-
+        
         self.before_invoke(self._handle_before_invoke)
         self.after_invoke(self._handle_after_invoke)
 
-        self._ctx = None
-        self._is_handle_playlist_change_called = False
-
-        self.current_message_count = 5
-
-        self._current_music_start_time = dt.datetime.now()
-
-    async def _handle_playlist_change(self):
-        self._is_handle_playlist_change_called = True
-
-        if not self.is_playing:
-            self._current_music_start_time = dt.datetime.now()
-            if self.queue.num_songs() == 1:
-                await self.join_channel()
-                self.music_play()
-        
-        async with self.queue_message_lock:
-            if self.current_message_count >= config.get('queue_message_threshold'):
-                self.current_message_count = 0
-
-                if self.latest_queue_message:
-                    await self.latest_queue_message.delete()
-
-                self.latest_queue_message = await self.latest_context.send(embed=self.make_queue_embed())
-
-            elif self.latest_queue_message:
-                await self.latest_queue_message.edit(content=None, embed=self.make_queue_embed())
-            
-        self._is_handle_playlist_change_called = False
 
     async def _handle_before_invoke(self, ctx):
-        self._ctx = ctx
+        self.current_context = ctx
         self.latest_context = ctx
-        self.current_message_count += 1
         await ctx.message.add_reaction("👌")
 
     async def _handle_after_invoke(self, ctx):
-        self._ctx = None
+        self.current_context = None
         await ctx.message.remove_reaction("👌", self.user)
         await ctx.message.add_reaction("👍")
 
     async def close(self):
-        if self.latest_queue_message:
-            await self.latest_queue_message.channel.send("Jag dör! 😱")
-            await self.latest_queue_message.delete()
+        for cog in self.cogs.values():
+            await cog.close()
+
+        if self.latest_context:
+            await self.latest_context.send("Jag dör! 😱")
+
         return await super().close()
-
-    def music_play(self, ctx=None):
-        ctx = ctx or self._ctx
-
-        if not ctx or not ctx.voice_client:
-            print("Error: Cant't play music, bot is not connected to voice")
-            return
-
-        if ctx.voice_client.is_playing():
-            # Just change audio source if we are currently playing something else
-            ctx.voice_client.source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_options())
-        else:
-            # Otherwise start playing as normal
-            source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_options())
-            ctx.voice_client.play(source, after=lambda e: play_next(ctx, e, self.loop))
-
-        self._current_music_start_time = dt.datetime.now()
-
-        if not self.is_playing:
-            self.is_playing = True
-            asyncio.run_coroutine_threadsafe(self.update_music_time(), self.loop)
-
-        if not self._is_handle_playlist_change_called:
-            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
-
-    def music_stop(self, ctx=None):
-        ctx = ctx or self._ctx
-        
-        if not ctx or not ctx.voice_client:
-            return
-
-        if ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
-
-        self.is_playing = False
-        self._current_music_start_time = dt.datetime.now()
-
-        if not self._is_handle_playlist_change_called:
-            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.loop)
-
-    def music_seek(self, time):
-        if not self.is_playing:
-            print("Warn: Can't seek when not playing any music")
-            return
-        
-        source = FFmpegPCMAudio(self.queue.current_song_source(), **self.music_current_ffmpeg_options())
-        
-        read_time = 0
-        while source.read() and read_time < time*1000:
-            read_time += 20
-
-        self._ctx.voice_client.source = source
-        self._current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=time)
-
-    def music_current_elapsed_time(self):
-        return (dt.datetime.now() - self._current_music_start_time).total_seconds()
-
-    def music_current_time_scale(self):
-        return self.music_nightcore_time_scale() if config.get("nightcore") else 1
-
-    def music_nightcore_time_scale(self):
-        # Using asetrate in ffmpeg apparently changes the duration of song as
-        # well, so we need to multiply these.
-        return config.get("nightcore_tempo")*config.get("nightcore_pitch")
-
-    def music_current_ffmpeg_options(self):
-        if not config.get('nightcore'):
-            return Stefan._FFMPEG_STANDARD_OPTIONS
-        else:
-            freq = self.queue.current_song()['asr']
-
-            _FFMPEG_NIGHTCORE_OPTIONS = {
-                **Stefan._FFMPEG_COMMON_OPTIONS,
-                'options': f'-af atempo={config.get("nightcore_tempo")},asetrate={freq}*{config.get("nightcore_pitch")} -vn'
-            }
-
-            return _FFMPEG_NIGHTCORE_OPTIONS
 
     async def join_channel(self):
         """
         Joins the users channel given the current context.
         """
-        if not self._ctx:
+        if not self.current_context:
             return
         
-        if self._ctx.author and self._ctx.author.voice:
-            if self._ctx.guild and self._ctx.guild.voice_client:
-                if self._ctx.author.voice.channel != self._ctx.guild.voice_client.channel:
-                    await self._ctx.guild.voice_client.move_to(self._ctx.author.voice.channel)
+        if self.current_context.author and self.current_context.author.voice:
+            if self.current_context.guild and self.current_context.guild.voice_client:
+                if self.current_context.author.voice.channel != self.current_context.guild.voice_client.channel:
+                    await self.current_context.guild.voice_client.move_to(self.current_context.author.voice.channel)
             else:
-                await self._ctx.author.voice.channel.connect()
-    
-    async def update_music_time(self):
-        while True:        
-            await asyncio.sleep(config.get('music_time_update_interval'))
-            
-            if not self.is_playing:
-                break
-            
-            await self._handle_playlist_change()
+                await self.current_context.author.voice.channel.connect()
 
-    def make_queue_embed(self):
-        description = self.queue.playlist_string(config.get("title_max_length"), config.get("before_current"), config.get("after_current"), self.music_current_elapsed_time(), self.music_current_time_scale())
-
-        playing = "✓" if stefan.is_playing else "✗"
-
-        nightcore = "✓" if config.get("nightcore") else "✗"
-
-        looped = "kö"
-        if config.get("is_looping_song"):
-            looping = "✓"
-            looped = "låt"
-        else:
-            looping = "✓" if config.get("is_looping_queue") else "✗"
-            
-        time = str(self.queue.duration(self.music_current_time_scale()))
-
-        info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {stefan.queue.num_songs()}⠀Längd: {time}\n"
-
-        description = info + description
-
-        return Embed(color=Color.orange(), title=f"Nuvarande kö 😙", description=description)
-        
 
 stefan = Stefan(command_prefix=config.get("prefix"))
+stefan.add_cog(Music(stefan))
 
 @stefan.event
 async def on_ready():
@@ -297,197 +147,3 @@ async def hjälp(ctx):
     embed.add_field(name="**kom / hit / komsi komsi / älskling jag är hemma**", value="Be mig att göra dig sällskap! 😇", inline=False)
     embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")
     await ctx.send(embed=embed)
-
-
-def play_next(ctx, e, loop):
-    if e:
-        print(f"Error: play_next(): {e}")
-        return
-
-    asyncio.run_coroutine_threadsafe(play_next_async(ctx), loop)
-
-async def play_next_async(ctx):
-    if stefan.queue.get_current_index() == stefan.queue.num_songs() and not (config.get("is_looping_queue") or config.get("is_looping_song")):
-        stefan.music_stop(ctx)
-    
-    elif stefan.is_playing:
-        if not config.get("is_looping_song"):
-            await stefan.queue.next()
-        stefan.music_play(ctx)
-    
-
-@stefan.command()
-async def next(ctx):
-    """ TODO: Write docstring """
-    if not (stefan.queue.get_current_index() == stefan.queue.num_songs() and not config.get("is_looping_queue")):
-        await stefan.queue.next()
-        stefan.music_play()
-    else:
-        stefan.music_stop()
-
-
-@stefan.command()
-async def prev(ctx):
-    """ TODO: Write docstring """
-    if not (stefan.queue.get_current_index() == 1 and not config.get("is_looping_queue")):
-        await stefan.queue.prev()
-        stefan.music_play()
-    else:
-        stefan.music_stop()
-
-
-@stefan.command()
-async def play(ctx, *args):
-    """ TODO: Write docstring """    
-
-    if len(args) == 1 and args[0].startswith(('http', 'www')):
-        # Assume user provided url
-        message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
-        await stefan.queue.add_song_from_url(args[0])
-        await message.delete(delay=config.get("message_delete_delay"))
-    elif len(args) >= 1:
-        # Assume user provided a string to search for on youtube
-        message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
-        await stefan.queue.add_song_from_query(' '.join(args))
-        await message.delete(delay=config.get("message_delete_delay"))
-
-    if stefan.queue.num_songs() == 0:
-        return
-
-    if not stefan.is_playing or len(args) == 0:
-        await stefan.join_channel()
-        stefan.music_play()
-
-
-@stefan.command()
-async def stop(ctx):
-    """ TODO: Write docstring """
-    stefan.music_stop()
-
-
-@stefan.command()
-async def clear(ctx):
-    """ TODO: Write docstring """    
-
-    stefan.music_stop()
-    await stefan.queue.clear()
-
-
-@stefan.command()
-async def remove(ctx, *args):
-    """ TODO: Write docstring """    
-
-    # Expand every 'x:y' entry to x, x+1, ..., y-1, y. Ignore incorrect ranges
-    indexes = []
-    for arg in args:
-        if ':' in arg:
-            start, end = [int(x) for x in arg.split(':')]
-            if start > end:
-                continue
-            for i in range(start, end+1):
-                indexes.append(i)
-        else:
-            indexes.append(int(arg))
-
-    # Remove the songs back to front so that we remove the correct song, 
-    # otherwise we would remove a song before another one and its index 
-    # would change causing us to remove the wrong one.
-    removed_current_song = False
-    for index in filter(lambda x: 0 <= x <= stefan.queue.num_songs(), sorted(indexes, reverse=True)):
-        removed_current_song = removed_current_song or (stefan.queue.get_current_index() == int(index))
-        await stefan.queue.remove(index)
-
-    if stefan.queue.num_songs() > 0:
-
-        if removed_current_song:
-            stefan.music_play()
-
-    else:
-        stefan.music_stop()
-    
-
-@stefan.command()
-async def move(ctx, index):
-    """ TODO: Write docstring """    
-
-    await stefan.queue.move(int(index))
-
-    if stefan.queue.num_songs() > 0:
-        stefan.music_play()
-
-
-@stefan.command(name="slumpa", aliases=["skaka", "blanda", "stavmixa"])
-async def shuffle(ctx):
-    """ TODO: Write docstring """    
-
-    await stefan.queue.shuffle()
-    stefan.music_play()
-
-
-@stefan.command(name="loopa", aliases=["snurra"])
-async def loopa(ctx, arg1=""):
-    """ TODO: Write docstring """ 
-
-    if arg1 in ["sång", "låt", "stycke"]:
-        await config.toggle('is_looping_song')
-    elif arg1 in ["kö", "lista"] or True:
-        await config.toggle('is_looping_queue')
-
-
-@stefan.command()
-async def nightcore(ctx):
-    """ TODO: Write docstring """    
-
-    await config.toggle('nightcore')
-
-    if config.get('nightcore'):
-        # If we previously played normally, we need go backward
-        seek_time = stefan.music_current_elapsed_time()/stefan.music_nightcore_time_scale()
-    else:
-        # And if we previously played nightcore, we need to go forward
-        seek_time = stefan.music_current_elapsed_time()*stefan.music_nightcore_time_scale()
-
-    stefan.music_seek(seek_time)
-
-
-@stefan.command()
-async def playlists(ctx):
-    embed=Embed(title="Spellistor:", color=Color.orange())
-    for name, desc, songs in stefan.queue.get_playlists():
-        noun = "låt" if len(songs) == 1 else "låtar"
-        embed.add_field(name=f"**{name} ({len(songs)} {noun})**", value=f"{desc}", inline=False)
-    await ctx.send(embed=embed)
-
-
-@stefan.command()
-async def kö(ctx, name=None):
-    
-    async with stefan.queue_message_lock:
-        stefan.current_message_count = 0
-        if stefan.latest_queue_message:
-            await stefan.latest_queue_message.delete()
-    
-        stefan.latest_queue_message = await ctx.send(embed=stefan.make_queue_embed())
-
-
-@stefan.command()
-async def seek(ctx, time):
-    
-    stefan.music_seek(int(time))
-
-
-@stefan.command()
-async def save(ctx, name, desc=None):
-    """ TODO: Write docstring """
-    stefan.queue.save(name, desc)
-
-
-@stefan.command()
-async def load(ctx, name):
-    """ TODO: Write docstring """
-    
-    success = await stefan.queue.load(name)
-
-    if success and not stefan.is_playing:
-        await stefan.join_channel()
-        stefan.music_play()
