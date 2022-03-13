@@ -35,10 +35,11 @@ class Music(commands.Cog):
 
         self.is_playing = False
         self.current_music_start_time = dt.datetime.now()
-        self.current_music_paused_at = 0
 
         self._is_handling_change = False
 
+        self.current_music_paused_time = 0
+        self.current_music_paused_index = -1
 
     # Override
 
@@ -89,7 +90,10 @@ class Music(commands.Cog):
             await self.queue_message.delete()
 
     def current_elapsed_time(self):
-        return (dt.datetime.now() - self.current_music_start_time).total_seconds()
+        if self.is_playing:
+            return (dt.datetime.now() - self.current_music_start_time).total_seconds()
+        else:
+            return self.current_music_paused_time
 
     def current_ffmpeg_options(self):
         if not self.config.get('nightcore'):
@@ -139,21 +143,20 @@ class Music(commands.Cog):
             print("Error: Cant't play music, bot is not connected to voice")
             return
 
-        if ctx.voice_client.is_playing():
-            # Just change audio source if we are currently playing something else
-            ctx.voice_client.source = FFmpegPCMAudio(self.queue.current_song_source(), **self.current_ffmpeg_options())
-        else:
-            # Otherwise start playing as normal
+        if not ctx.voice_client.is_playing():
+            # If we are not playing we need to send a source to the voice
+            # client, otherwise the seek() will take care of it
             source = FFmpegPCMAudio(self.queue.current_song_source(), **self.current_ffmpeg_options())
             ctx.voice_client.play(source, after=lambda e: self.play_next(ctx, e, self.bot.loop))
-
-        self.current_music_start_time = dt.datetime.now()
 
         if not self.is_playing:
             self.is_playing = True
             asyncio.run_coroutine_threadsafe(self._update_music_time(), self.bot.loop)
 
-        self.seek(self.current_music_paused_at)
+        if self.current_music_paused_index != self.queue.get_current_index():
+            self.current_music_paused_time = 0
+
+        self.seek(self.current_music_paused_time)
 
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
@@ -174,19 +177,18 @@ class Music(commands.Cog):
                 await self.queue.next()
             self.play(ctx)
 
-    def seek(self, time):
-        if not self.is_playing:
-            print("Warn: Can't seek when not playing any music")
-            return
-        
-        source = FFmpegPCMAudio(self.queue.current_song_source(), **self.current_ffmpeg_options())
-        
-        read_time = 0
-        while source.read() and read_time < time*1000:
-            read_time += 20
+    def seek(self, time):       
+        if self.is_playing:
+            source = FFmpegPCMAudio(self.queue.current_song_source(), **self.current_ffmpeg_options())
+            
+            read_time = 0
+            while source.read() and read_time < time*1000:
+                read_time += 20
 
-        self.bot.latest_context.voice_client.source = source
-        self.current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=time)
+            self.bot.latest_context.voice_client.source = source
+            self.current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=time)
+        else:
+            self.current_music_paused_time = time
 
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
@@ -201,7 +203,8 @@ class Music(commands.Cog):
             ctx.voice_client.stop()
 
         self.is_playing = False
-        self.current_music_paused_at = (dt.datetime.now() - self.current_music_start_time).total_seconds()
+        self.current_music_paused_time = (dt.datetime.now() - self.current_music_start_time).total_seconds()
+        self.current_music_paused_index = self.queue.get_current_index()
 
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
@@ -217,7 +220,7 @@ class Music(commands.Cog):
 
         self.is_playing = False
         self.current_music_start_time = dt.datetime.now()
-        self.current_music_paused_at = 0
+        self.current_music_paused_time = 0
 
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
