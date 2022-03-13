@@ -1,11 +1,12 @@
-""" TODO: Write docstring """
-
-from config import config
-from stefan import stefan
 import discord.errors
 
+from config import Config
+from stefan import Stefan
+from cogs import Music, Misc
 
 def main():
+    config = Config('config.json')
+    
     discord_token = config.get("token", allow_default=False)
 
     if not discord_token:
@@ -13,6 +14,10 @@ def main():
         return
 
     try:
+        stefan = Stefan(command_prefix=config.get("prefix"))
+        stefan.add_cog(Music(stefan, config))
+        stefan.add_cog(Misc(stefan, config))
+
         stefan.run(config.get("token"))
     except discord.errors.LoginFailure:
         print("Error: Something went wrong when using discord credentials")

@@ -1,14 +1,13 @@
-from discord import Embed
+from discord import Color, Embed
 from discord.ext import commands
-
-from config import config
 
 class Misc(commands.Cog):
     
-    def __init__(self, bot) -> None:
+    def __init__(self, bot, config) -> None:
         super().__init__()
 
         self.bot = bot
+        self.config = config
 
     async def close(self):
         pass
@@ -23,7 +22,7 @@ class Misc(commands.Cog):
         """ TODO: Write docstring """
 
         self.command_prefix = new_prefix
-        await config.set("prefix", new_prefix)
+        await self.config.set("prefix", new_prefix)
 
         await ctx.message.channel.send("Tack för mitt nya prefix! 🥰")
 

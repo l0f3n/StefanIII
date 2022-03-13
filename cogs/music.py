@@ -4,7 +4,6 @@ import datetime as dt
 from discord import Color, Embed, FFmpegPCMAudio
 from discord.ext import commands
 
-from config import config
 from playlist import Queue
 
 class Music(commands.Cog):
@@ -18,7 +17,7 @@ class Music(commands.Cog):
         'options': '-vn'
     }
 
-    def __init__(self, bot):
+    def __init__(self, bot, config):
         super().__init__()
 
         self.bot = bot
@@ -32,8 +31,7 @@ class Music(commands.Cog):
         self.queue_message = None
         self.queue_message_lock = asyncio.Lock()
 
-        self.message_count = 0
-        self.message_count_lock = asyncio.Lock()
+        self.messages_since_last_update = self.config.get('queue_message_threshold')
 
         self.is_playing = False
         self.current_music_start_time = dt.datetime.now()
@@ -44,7 +42,7 @@ class Music(commands.Cog):
     # Override
 
     async def cog_after_invoke(self, ctx):
-        self.message_count += 1
+        self.messages_since_last_update += 1
 
         return await super().cog_after_invoke(ctx)
 
@@ -60,11 +58,10 @@ class Music(commands.Cog):
                 await self.bot.join_channel()
                 self.play()
         
-        async with self.message_count_lock:
-            send_new_message = (self.message_count % self.config.get('queue_message_threshold')) == 0
-
         async with self.queue_message_lock:
-            if send_new_message:            
+            if self.messages_since_last_update >= self.config.get('queue_message_threshold'):
+                self.messages_since_last_update = 0
+                
                 if self.queue_message:
                     await self.queue_message.delete()
 
@@ -310,11 +307,10 @@ class Music(commands.Cog):
     @commands.command(name="queue", aliases=["kö"])
     async def _queue(self, ctx):
         async with self.queue_message_lock:
-            # self.current_message_count = 0
+            self.messages_since_last_update = 0
             if self.queue_message:
                 await self.queue_message.delete()
         
-            # self.latest_queue_message = 
             self.queue_message = await ctx.send(embed=self.make_queue_embed())
 
     @commands.command(name="remove")

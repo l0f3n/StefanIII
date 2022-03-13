@@ -1,10 +1,6 @@
 import discord
 from discord.ext import commands
 
-from config import config
-from music import Music
-from misc import Misc
-
 class Stefan(commands.Bot):
     
     def __init__(self, *args, **kwargs):
@@ -52,7 +48,3 @@ class Stefan(commands.Bot):
     async def on_ready(self):
         print("Stefan anmäler sig för tjänstgöring.")
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ert skitsnack"))
-
-stefan = Stefan(command_prefix=config.get("prefix"))
-stefan.add_cog(Music(stefan))
-stefan.add_cog(Misc(stefan))
