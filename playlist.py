@@ -72,7 +72,6 @@ class Queue:
             if 'entries' in info:
                 for entry_info in info['entries']:
                     await self._add_song_from_info(entry_info)
-                    await asyncio.sleep(0)
             else:
                 await self._add_song_from_info(info)
 
@@ -102,12 +101,11 @@ class Queue:
             elif item_type == "playlist":
                 for track in spotify.playlist(item_id)['tracks']['items']:
                     await self.add_song_from_query(self._spotify_query_string(track['track']))
-                    await asyncio.sleep(0)
             
             elif item_type == "album":
                 for track in spotify.album_tracks(item_id)['tracks']['items']:
                     await self.add_song_from_query(self._spotify_query_string(track))
-                    await asyncio.sleep(0)
+
         except spotipy.oauth2.SpotifyOauthError:
             print("Error: Something went wrong when using Spotify credentials")
             return
@@ -298,7 +296,6 @@ class Queue:
         if time_since_updated > dt.timedelta(hours=4):
             for song in playlists[name]['songs']:
                 await self.add_song_from_youtube_url(song['url'])
-                await asyncio.sleep(0)
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])
