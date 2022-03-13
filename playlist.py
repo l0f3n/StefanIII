@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import random
 import re
+from typing import Iterable
 
 import yt_dlp
 import spotipy
@@ -185,17 +186,28 @@ class Queue:
         self.current = 0
         await self._notify()
 
-    async def remove(self, index: int):
-        index = self._unprepare_index_(index)
-        if index < len(self.playlist):
-            del self.playlist[index]
-        
-        # Decrease index if we removed song before current one in queue or
-        # we remove the song at the end of the queue that was not the last song
-        if index < self.current or (index != 0 and self.current == len(self.playlist)):
-            self.current -= 1
+    async def remove(self, arg, notify=True):
 
-        await self._notify()
+        if isinstance(arg, int):
+            index = self._unprepare_index_(arg)
+
+            if 0 <= index < len(self.playlist):
+                del self.playlist[index]
+            
+            # Decrease index if we removed song before current one in queue or
+            # we remove the song at the end of the queue that was not the last song
+            if index < self.current or (index != 0 and self.current == len(self.playlist)):
+                self.current -= 1
+
+        elif isinstance(arg, Iterable):
+            # Remove the songs back to front so that we remove the correct song, 
+            # otherwise we would remove a song before another one and its index 
+            # would change causing us to remove the wrong one.
+            for index in sorted(arg, reverse=True):
+                await self.remove(index, notify=False)
+
+        if notify:
+            await self._notify()
 
     def num_songs(self):
         return len(self.playlist)

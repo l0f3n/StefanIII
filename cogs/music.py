@@ -353,17 +353,12 @@ class Music(commands.Cog):
             else:
                 indexes.append(int(arg))
 
-        # Remove the songs back to front so that we remove the correct song, 
-        # otherwise we would remove a song before another one and its index 
-        # would change causing us to remove the wrong one.
-        removed_current_song = False
-        for index in filter(lambda x: 0 <= x <= self.queue.num_songs(), sorted(indexes, reverse=True)):
-            removed_current_song = removed_current_song or (self.queue.get_current_index() == int(index))
-            await self.queue.remove(index)
+        await self.queue.remove(index for index in indexes if 1 <= index <= self.queue.num_songs())
 
         if self.queue.num_songs() > 0:
 
-            if removed_current_song:
+            if self.queue.get_current_index() in indexes:
+                # We removed the current song so we need to play another one
                 self.play()
 
         else:
