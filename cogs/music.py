@@ -133,7 +133,7 @@ class Music(commands.Cog):
         return self.config.get("nightcore_tempo")*self.config.get("nightcore_pitch")
 
     def play(self, ctx=None):
-        ctx = ctx or self.bot.current_context
+        ctx = ctx or self.bot.latest_context
 
         if not ctx or not ctx.voice_client:
             print("Error: Cant't play music, bot is not connected to voice")
@@ -183,14 +183,14 @@ class Music(commands.Cog):
         while source.read() and read_time < time*1000:
             read_time += 20
 
-        self.bot.current_context.voice_client.source = source
+        self.bot.latest_context.voice_client.source = source
         self.current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=time)
 
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
 
     def stop(self, ctx=None):
-        ctx = ctx or self.bot.current_context
+        ctx = ctx or self.bot.latest_context
         
         if not ctx or not ctx.voice_client:
             return
