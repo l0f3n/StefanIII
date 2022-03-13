@@ -310,7 +310,7 @@ class Music(commands.Cog):
 
         self.pause()
 
-    @commands.command(name="play")
+    @commands.command(name="play", aliases=["p"])
     async def _play(self, ctx, *args):
         """
         Start playing music.
@@ -342,7 +342,7 @@ class Music(commands.Cog):
             await self.bot.join_channel()
             self.play()
     
-    @commands.command(name="playlists", aliases=["spellistor", 'pl', 'sp'])
+    @commands.command(name="playlists", aliases=["spellistor", 'pl'])
     async def _playlists(self, ctx):
         """
         Lists all the saved playlists.
@@ -366,7 +366,7 @@ class Music(commands.Cog):
         else:
             self.stop()
 
-    @commands.command(name="queue", aliases=["kö"])
+    @commands.command(name="queue", aliases=["q", "kö"])
     async def _queue(self, ctx):
         """
         Shows the current queue, which will continuously update.
