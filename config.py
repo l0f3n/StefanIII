@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -51,6 +52,16 @@ class Config:
             await self._notify()
         else:
             print(f"Error: Can't set config with key '{key}': No such config exists.")
+
+    def set_from_env_var(self, key: str, env_var: str):
+        """
+        Tries to set a config value based on an environment variable. Do
+        nothing if that config doesn't already exist or an environment 
+        variable is not found.
+        """
+        if not self.get(key, allow_default=False) and (value := os.getenv(env_var)):       
+            self.config[key] = value
+            self.save()
     
     async def toggle(self, key: str):
         await self.set(key, not self.get(key))
