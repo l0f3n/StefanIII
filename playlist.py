@@ -10,8 +10,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from utils import format_time
 
-from config import config
-
 class Queue:
 
     PLAYLISTS_PATH = "playlists.json"
@@ -27,7 +25,9 @@ class Queue:
         'noplaylist': True,
     }
 
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
+        self.config = config
+
         self.playlist = []
         self.current = 0
         self._on_update_callbacks = []
@@ -78,8 +78,8 @@ class Queue:
         return track['name'] + ' - ' + track['artists'][0]['name']
 
     async def add_song_from_spotify_url(self, url: str):
-        spotify_id = config.get("spotify_id", allow_default=False)
-        spotify_secret = config.get("spotify_secret", allow_default=False)
+        spotify_id = self.config.get("spotify_id", allow_default=False)
+        spotify_secret = self.config.get("spotify_secret", allow_default=False)
         
         if not spotify_id or not spotify_secret:
             print("Error: Can't add song from Spotify, please add your credentials to 'config.json'")

@@ -22,7 +22,7 @@ class Music(commands.Cog):
 
         self.bot = bot
 
-        self.queue = Queue()
+        self.queue = Queue(config)
         self.queue.add_on_update_callback(self._handle_playlist_change)
         
         self.config = config
