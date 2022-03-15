@@ -4,7 +4,7 @@ import datetime as dt
 from discord import Color, Embed, FFmpegPCMAudio
 from discord.ext import commands
 
-from playlist import Queue
+from .playlist import Queue
 
 class Music(commands.Cog):
 
