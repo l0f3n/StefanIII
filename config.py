@@ -1,7 +1,6 @@
 import json
 import os
 from pathlib import Path
-import sys
 
 class Config:
 
@@ -69,15 +68,13 @@ class Config:
     def load(self, path: str):
         self.path = Path(path)
         
-        if not self.path.exists():
-            print(f"Creating config file ('{self.path}'). Please fill in missing values.")
+        if self.path.exists():
+            with open(self.path, encoding="utf8") as f:
+                self.config = json.loads(f.read())
+                self._update_if_needed_()
+        else:
             self.config = Config.DEFAULT
             self.save()
-            sys.exit()
-
-        with open(self.path, encoding="utf8") as f:
-            self.config = json.loads(f.read())
-            self._update_if_needed_()
 
     def _update_if_needed_(self):
         default_keys = set(Config.DEFAULT.keys())
