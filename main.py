@@ -8,7 +8,7 @@ def main():
     config = Config('config.json')
 
     config.set_from_env_var('token', 'DISCORD_TOKEN')
-    config.set_from_env_var('spotify_id', 'SPOTITFY_ID')
+    config.set_from_env_var('spotify_id', 'SPOTIFY_ID')
     config.set_from_env_var('spotify_secret', 'SPOTIFY_SECRET')
     
     discord_token = config.get("token", allow_default=False)
