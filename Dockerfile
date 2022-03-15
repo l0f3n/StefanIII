@@ -9,4 +9,4 @@ RUN apt -y update
 RUN apt -y upgrade
 RUN apt -y install ffmpeg
 
-CMD python3 main.py
+CMD python3 src/main.py
