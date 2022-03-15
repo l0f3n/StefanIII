@@ -1,4 +1,3 @@
-import asyncio
 import datetime as dt
 import json
 from pathlib import Path
@@ -6,7 +5,7 @@ import random
 import re
 from typing import Iterable
 
-import yt_dlp
+import youtube_dl
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from utils import format_time
@@ -60,7 +59,7 @@ class Queue:
             **Queue.COMMON_YDL_OPTIONS,
         }
 
-        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+        with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
 
             # We don't get any info when we (probably among other things) don't
@@ -117,7 +116,7 @@ class Queue:
             'default_search': 'ytsearch',
         }
 
-        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+        with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(query, download=False)
             
             # We don't get any info when we (probably among other things) don't
