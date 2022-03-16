@@ -74,6 +74,7 @@ class Config:
         self.path = Path(path)
         
         if self.path.exists():
+            logger.debug(f"Found config file '{path}', using those values")
             with open(self.path, encoding="utf8") as f:
                 self.config = json.loads(f.read())
                 self._update_if_needed_()

@@ -10,6 +10,12 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from utils import format_time
 
+from log import get_logger
+
+
+logger = get_logger(__name__)
+
+
 class Queue:
 
     PLAYLISTS_PATH = "playlists.json"
@@ -65,7 +71,7 @@ class Queue:
             # We don't get any info when we (probably among other things) don't
             # have access to the specified playlist. Just ignore it then.
             if not info:
-                print("Warning: No info found for the specified url")
+                logger.error(f"No info found for url '{url}'")
                 return
 
             if 'entries' in info:
@@ -82,7 +88,7 @@ class Queue:
         spotify_secret = self.config.get("spotify_secret", allow_default=False)
         
         if not spotify_id or not spotify_secret:
-            print("Error: Can't add song from Spotify, please add your credentials to 'config.json'")
+            logger.warning("Can't add song from Spotify, spotify_id or spotify_secret not set")
             return
 
         spotify = spotipy.Spotify(
@@ -105,8 +111,8 @@ class Queue:
                 for track in spotify.album_tracks(item_id)['tracks']['items']:
                     await self.add_song_from_query(self._spotify_query_string(track))
 
-        except spotipy.oauth2.SpotifyOauthError:
-            print("Error: Something went wrong when using Spotify credentials")
+        except spotipy.oauth2.SpotifyOauthError as e:
+            logger.warn("Something went wrong when using Spotify credentials", exec_info=e)
             return
 
     async def add_song_from_query(self, query: str):
@@ -122,7 +128,7 @@ class Queue:
             # We don't get any info when we (probably among other things) don't
             # get any search result for the query. Just ignore it then.
             if not info:
-                print(f"Warn: No search results found for query '{query}'")
+                logger.warning(f"No search results found for query '{query}'")
                 return
             
             if 'entries' in info:
@@ -133,7 +139,7 @@ class Queue:
         # If a video is unavailable in a playlist we get None as info argument.
         # So we check that and just ignore it if that is the case.
         if not info:
-            print("Warning: Ignoring unavailable video")
+            logger.warning("Ignoring unavailable video")
             return
 
         self.playlist.append({  
@@ -224,7 +230,7 @@ class Queue:
 
     def get_playlists(self):
         if not Path(Queue.PLAYLISTS_PATH).exists():
-            print("Error: Can't load playlists, no such file exists")
+            logger.error(f"Can't load playlists, file '{Queue.PLAYLISTS_PATH}' not found")
             return {}
 
         with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
@@ -270,14 +276,14 @@ class Queue:
 
     async def load(self, name: str) -> bool:
         if not Path(Queue.PLAYLISTS_PATH).exists():
-            print("Error: Can't load playlists, no such file exists")
+            logger.error(f"Can't load playlists, file '{Queue.PLAYLISTS_PATH}' not found")
             return False
         
         with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
             playlists = json.loads(f.read())
 
         if name not in playlists:
-           print("Error: No playlist with that name exists")
+           logger.error(f"Can't load playlist '{name}', playlist not found")
            return False
         
         # The source link gotten from youtube-dl apparently expire after some

@@ -4,7 +4,12 @@ import datetime as dt
 from discord import Color, Embed, FFmpegPCMAudio
 from discord.ext import commands
 
+from log import get_logger
 from .playlist import Queue
+
+
+logger = get_logger(__name__)
+
 
 class Music(commands.Cog):
 
@@ -140,7 +145,7 @@ class Music(commands.Cog):
         ctx = ctx or self.bot.latest_context
 
         if not ctx or not ctx.voice_client:
-            print("Error: Cant't play music, bot is not connected to voice")
+            logger.warning("Can't play music, bot is not connected to voice")
             return
 
         if not ctx.voice_client.is_playing():
@@ -163,7 +168,7 @@ class Music(commands.Cog):
 
     def play_next(self, ctx, e, loop):
         if e:
-            print(f"Error: play_next(): {e}")
+            logger.error(f"Something went wrong in play_next()", exec_info=e)
             return
 
         asyncio.run_coroutine_threadsafe(self.play_next_async(ctx), loop)
@@ -335,7 +340,7 @@ class Music(commands.Cog):
             await message.delete(delay=self.config.get("message_delete_delay"))
 
         if self.queue.num_songs() == 0:
-            print("Warn: Can't play music, no songs in queue")
+            logger.warning("Can't play music, no songs in queue")
             return
 
         if not self.is_playing or len(args) == 0:
