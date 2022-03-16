@@ -1,6 +1,7 @@
 # Local files
 config.json
 playlists.json
+stefan.log
 
 # Python files
 *.pyc

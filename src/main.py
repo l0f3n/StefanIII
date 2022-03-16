@@ -1,8 +1,11 @@
 import discord.errors
 
 from config import Config
+from log import get_logger
 from stefan import Stefan
 from cogs import Music, Misc
+
+logger = get_logger(__name__)
 
 def main():
     config = Config('config.json')
@@ -14,7 +17,7 @@ def main():
     discord_token = config.get("token", allow_default=False)
 
     if not discord_token:
-        print("Error: Can't start bot, please add your discord bot token to 'config.json'")
+        logger.error("Can't start bot, no token provided")
         return
 
     try:
@@ -23,8 +26,8 @@ def main():
         stefan.add_cog(Misc(stefan, config))
 
         stefan.run(config.get("token"))
-    except discord.errors.LoginFailure:
-        print("Error: Something went wrong when using discord credentials")
+    except discord.errors.LoginFailure as e:
+        logger.error("Something went wrong when using discord credentials", exc_info=e)
 
 
 if __name__ == '__main__':

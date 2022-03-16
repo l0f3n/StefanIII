@@ -2,6 +2,10 @@ import json
 import os
 from pathlib import Path
 
+from log import get_logger
+
+logger = get_logger(__name__)
+
 class Config:
 
     DEFAULT = {
@@ -41,7 +45,7 @@ class Config:
 
             return self.config[key]
         else:
-            print(f"Error: No config with key '{key}' exists.")
+            logger.warning(f"No config called '{key}' exists.")
             return None
 
     async def set(self, key: str, value):
@@ -50,7 +54,7 @@ class Config:
             self.save()
             await self._notify()
         else:
-            print(f"Error: Can't set config with key '{key}': No such config exists.")
+            logger.warning(f"Can't set config varible '{key}', it doesn't exist.")
 
     def set_from_env_var(self, key: str, env_var: str):
         """
@@ -59,6 +63,7 @@ class Config:
         variable is not found.
         """
         if not self.get(key, allow_default=False) and (value := os.getenv(env_var)):       
+            logger.debug(f"Trying to set config variable '{key}' using environment variable '{env_var}'")
             self.config[key] = value
             self.save()
     
@@ -73,6 +78,7 @@ class Config:
                 self.config = json.loads(f.read())
                 self._update_if_needed_()
         else:
+            logger.debug(f"Config file '{path}' not found, using default configuration")
             self.config = Config.DEFAULT
             self.save()
 
@@ -86,9 +92,11 @@ class Config:
         if new_keys or old_keys:
 
             for key in new_keys:
+                logger.debug(f"Adding default value for config variable '{key}'")
                 self.config[key] = Config.DEFAULT[key]
             
             for key in old_keys:
+                logger.debug(f"Removing old config value for config variable '{key}'")
                 del self.config[key]
 
             self.save()
