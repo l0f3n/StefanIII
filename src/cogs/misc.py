@@ -100,3 +100,4 @@ class Misc(commands.Cog):
         embed.add_field(name="**kom / hit / komsi komsi / älskling jag är hemma**", value="Be mig att göra dig sällskap! 😇", inline=False)
         embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")
         await ctx.send(embed=embed)
+        

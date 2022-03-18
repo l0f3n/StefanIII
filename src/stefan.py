@@ -1,4 +1,5 @@
 import discord
+from difflib import SequenceMatcher
 from discord.ext import commands
 
 class Stefan(commands.Bot):
@@ -47,3 +48,51 @@ class Stefan(commands.Bot):
     async def on_ready(self):
         print("Stefan anmäler sig för tjänstgöring.")
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ert skitsnack"))
+
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, discord.ext.commands.CommandNotFound):
+            commands = []
+            ratios = []
+            invokes = []
+            
+            for cog in self.cogs.values():
+                for command in cog.get_commands():
+                    commands.append(command)
+
+                    print(command.clean_params)
+
+                    max_ratio = SequenceMatcher(None, ctx.invoked_with, command.name).ratio()
+                    invoke = command.name
+
+                    for alias in command.aliases:
+                        ratio = SequenceMatcher(None, ctx.invoked_with, alias).ratio()
+                        if ratio > max_ratio:
+                            max_ratio = ratio
+                            invoke = alias
+                    
+                    ratios.append(max_ratio)
+                    invokes.append(invoke)
+
+            max_index = 0
+            current_index = 0
+            max_ratio = 0
+
+            for ratio in ratios:
+                if ratio > max_ratio:
+                    max_ratio = ratio
+                    max_index = current_index
+                current_index += 1
+            
+            print(max_ratio)
+
+            if max_ratio > 0.3:
+                args = ctx.message.content.split()[1:]
+
+                await ctx.send(f"Jag antar att du ville skriva {invokes[max_index]}? 🤔")
+                await self._handle_before_invoke(ctx)
+                await commands[max_index].__call__(ctx, *args)
+                await self._handle_after_invoke(ctx)
+            else:
+                await ctx.send("Njae, nu har du nog skrivit något tokigt... 🤔")
+        else:
+            raise error    
