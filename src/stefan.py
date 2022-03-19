@@ -2,6 +2,11 @@ import discord
 from difflib import SequenceMatcher
 from discord.ext import commands
 
+from log import get_logger
+
+logger = get_logger(__name__)
+
+
 class Stefan(commands.Bot):
     
     def __init__(self, *args, **kwargs):
@@ -13,6 +18,7 @@ class Stefan(commands.Bot):
         self.after_invoke(self._handle_after_invoke)
 
     async def _handle_before_invoke(self, ctx):
+        logger.info(f"Command: {ctx.invoked_with}, Args: {ctx.args[2:]}")
         self.latest_context = ctx
         await ctx.message.add_reaction("👌")
 
@@ -68,8 +74,6 @@ class Stefan(commands.Bot):
                 for command in cog.get_commands():
                     commands.append(command)
 
-                    print(command.clean_params)
-
                     max_ratio = SequenceMatcher(None, ctx.invoked_with, command.name).ratio()
                     invoke = command.name
 
@@ -91,13 +95,12 @@ class Stefan(commands.Bot):
                     max_ratio = ratio
                     max_index = current_index
                 current_index += 1
-            
-            print(max_ratio)
 
             if max_ratio > 0.3:
                 args = ctx.message.content.split()[1:]
 
                 await ctx.send(f"Jag antar att du ville skriva {invokes[max_index]}? 🤔")
+                ctx.args = [commands[max_index], ctx, *args]
                 await self._handle_before_invoke(ctx)
                 await commands[max_index].__call__(ctx, *args)
                 await self._handle_after_invoke(ctx)
