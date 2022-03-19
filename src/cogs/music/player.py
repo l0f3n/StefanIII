@@ -8,6 +8,7 @@ class MusicPlayer:
 
     def __init__(self, voice_client: discord.VoiceClient, song, ffmpeg_options, after):
         self._vc = voice_client
+        self._song = song
         self._after = after
 
         self._start_time = dt.datetime.now()
@@ -15,14 +16,16 @@ class MusicPlayer:
 
         self._is_stopped = True
 
-        self.song = song
         self.ffmpeg_options = ffmpeg_options
 
-    def play(self, force_start=True, ignore_pause=True):
+    def play(self, song=None, force_start=True, ignore_pause=True):
+
+        if song:
+            self._song = song
 
         if self.is_playing():
             # We can simply just switch the source if we are already playing something
-            self._vc.source = FFmpegPCMAudio(self.song['source'], **self.ffmpeg_options)
+            self._vc.source = FFmpegPCMAudio(self._song['source'], **self.ffmpeg_options)
             self._start_time = dt.datetime.now()
             self._is_stopped = False
 
@@ -33,7 +36,7 @@ class MusicPlayer:
 
         elif not self.is_stopped() or (self.is_stopped() and force_start):
             # But if we are not playing we need to send a new source to the voice client
-            self._vc.play(FFmpegPCMAudio(self.song['source'], **self.ffmpeg_options), after=self._after)
+            self._vc.play(FFmpegPCMAudio(self._song['source'], **self.ffmpeg_options), after=self._after)
             self._start_time = dt.datetime.now()
             self._is_stopped = False
 
@@ -48,7 +51,7 @@ class MusicPlayer:
 
         if not self.is_stopped():
             # When we are playing or paused we just fastforward the current song from the beginning to the desired time
-            source = FFmpegPCMAudio(self.song['source'], **self.ffmpeg_options)
+            source = FFmpegPCMAudio(self._song['source'], **self.ffmpeg_options)
 
             # TODO: This is really slow. Implement it by using ffmpeg instead:
             #  https://stackoverflow.com/questions/18444194/cutting-the-videos-based-on-start-and-end-time-using-ffmpeg

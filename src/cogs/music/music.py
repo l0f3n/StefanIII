@@ -114,8 +114,7 @@ class Music(commands.Cog):
                 self.queue.next()
 
             if self._music_player:
-                self._music_player.song = self.queue.current_song()
-                self._music_player.play(force_start=False)
+                self._music_player.play(self.queue.current_song(), force_start=False)
 
     # =================================================
     # ========== Wrappers around MusicPlayer ==========
@@ -199,8 +198,7 @@ class Music(commands.Cog):
         if self.queue.num_songs() > 0:
 
             if self._music_player:
-                self._music_player.song = self.queue.current_song()
-                self._music_player.play()
+                self._music_player.play(self.queue.current_song())
 
     @commands.command(name="next")
     async def _next(self, ctx):
@@ -212,8 +210,7 @@ class Music(commands.Cog):
             self.queue.next()
 
             if self._music_player:
-                self._music_player.song = self.queue.current_song()
-                self._music_player.play()
+                self._music_player.play(self.queue.current_song())
 
         else:
             self.stop()
@@ -305,8 +302,7 @@ class Music(commands.Cog):
             self.queue.prev()
 
             if self._music_player:
-                self._music_player.song = self.queue.current_song()
-                self._music_player.play()
+                self._music_player.play(self.queue.current_song())
 
         else:
             self.stop()
@@ -351,8 +347,7 @@ class Music(commands.Cog):
             if removed_current_song:
 
                 if self._music_player:
-                    self._music_player.song = self.queue.current_song()
-                    self._music_player.play()
+                    self._music_player.play(self.queue.current_song())
 
         else:
             self.stop()
@@ -386,8 +381,7 @@ class Music(commands.Cog):
         self.queue.shuffle()
 
         if self._music_player:
-            self._music_player.song = self.queue.current_song()
-            self._music_player.play()
+            self._music_player.play(self.queue.current_song())
 
     @commands.command(name="stop", aliases=["stoppa"])
     async def _stop(self, ctx):
