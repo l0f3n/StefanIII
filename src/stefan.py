@@ -101,6 +101,7 @@ class Stefan(commands.Bot):
 
                 await ctx.send(f"Jag antar att du ville skriva {invokes[max_index]}? 🤔")
                 ctx.args = [commands[max_index], ctx, *args]
+                ctx.invoked_with = commands[max_index].name
                 await self._handle_before_invoke(ctx)
                 await commands[max_index].__call__(ctx, *args)
                 await self._handle_after_invoke(ctx)
