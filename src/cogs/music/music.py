@@ -7,16 +7,14 @@ from discord.ext import commands
 from log import get_logger
 from .playlist import Queue
 
-
 logger = get_logger(__name__)
 
 
 class Music(commands.Cog):
-
     _FFMPEG_COMMON_OPTIONS = {
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     }
-    
+
     _FFMPEG_STANDARD_OPTIONS = {
         **_FFMPEG_COMMON_OPTIONS,
         'options': '-vn'
@@ -29,7 +27,7 @@ class Music(commands.Cog):
 
         self.queue = Queue(config)
         self.queue.add_on_update_callback(self._handle_playlist_change)
-        
+
         self.config = config
         self.config.add_on_update_callback(self._handle_playlist_change)
 
@@ -53,21 +51,20 @@ class Music(commands.Cog):
 
         return await super().cog_after_invoke(ctx)
 
-
     # Private methods
 
     async def _handle_playlist_change(self):
         self._is_handling_change = True
-        
+
         if not self.is_playing:
             if self.queue.num_songs() == 1:
                 await self.bot.join_channel()
                 self.play()
-        
+
         async with self.queue_message_lock:
             if self.messages_since_last_update >= self.config.get('queue_message_threshold'):
                 self.messages_since_last_update = 0
-                
+
                 if self.queue_message:
                     await self.queue_message.delete()
 
@@ -75,18 +72,17 @@ class Music(commands.Cog):
 
             elif self.queue_message:
                 await self.queue_message.edit(content=None, embed=self.make_queue_embed())
-            
+
         self._is_handling_change = False
 
     async def _update_music_time(self):
-        while True:        
+        while True:
             await asyncio.sleep(self.config.get('music_time_update_interval'))
-            
+
             if not self.is_playing:
                 break
-            
-            await self._handle_playlist_change()
 
+            await self._handle_playlist_change()
 
     # Public methods
 
@@ -115,7 +111,9 @@ class Music(commands.Cog):
         return self.nightcore_time_scale() if self.config.get("nightcore") else 1
 
     def make_queue_embed(self):
-        description = self.queue.playlist_string(self.config.get("title_max_length"), self.config.get("before_current"), self.config.get("after_current"), self.current_elapsed_time(), self.current_time_scale())
+        description = self.queue.playlist_string(self.config.get("title_max_length"), self.config.get("before_current"),
+                                                 self.config.get("after_current"), self.current_elapsed_time(),
+                                                 self.current_time_scale())
 
         playing = "✓" if self.is_playing else "✗"
 
@@ -127,7 +125,7 @@ class Music(commands.Cog):
             looped = "låt"
         else:
             looping = "✓" if self.config.get("is_looping_queue") else "✗"
-            
+
         time = self.queue.duration(self.current_time_scale())
 
         info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {self.queue.num_songs()}⠀Längd: {time}\n"
@@ -139,7 +137,7 @@ class Music(commands.Cog):
     def nightcore_time_scale(self):
         # Using asetrate in ffmpeg apparently changes the duration of song as
         # well, so we need to multiply these.
-        return self.config.get("nightcore_tempo")*self.config.get("nightcore_pitch")
+        return self.config.get("nightcore_tempo") * self.config.get("nightcore_pitch")
 
     def play(self, ctx=None):
         ctx = ctx or self.bot.latest_context
@@ -168,26 +166,27 @@ class Music(commands.Cog):
 
     def play_next(self, ctx, e, loop):
         if e:
-            logger.error(f"Something went wrong in play_next()", exec_info=e)
+            logger.error(f"Something went wrong in play_next()", exc_info=e)
             return
 
         asyncio.run_coroutine_threadsafe(self.play_next_async(ctx), loop)
 
     async def play_next_async(self, ctx):
-        if self.queue.get_current_index() == self.queue.num_songs() and not (self.config.get("is_looping_queue") or self.config.get("is_looping_song")):
+        if self.queue.get_current_index() == self.queue.num_songs() and not (
+                self.config.get("is_looping_queue") or self.config.get("is_looping_song")):
             self.stop(ctx)
-        
+
         elif self.is_playing:
             if not self.config.get("is_looping_song"):
                 await self.queue.next()
             self.play(ctx)
 
-    def seek(self, time):       
+    def seek(self, time):
         if self.is_playing:
             source = FFmpegPCMAudio(self.queue.current_song_source(), **self.current_ffmpeg_options())
-            
+
             read_time = 0
-            while source.read() and read_time < time*1000:
+            while source.read() and read_time < time * 1000:
                 read_time += 20
 
             self.bot.latest_context.voice_client.source = source
@@ -200,7 +199,7 @@ class Music(commands.Cog):
 
     def pause(self, ctx=None):
         ctx = ctx or self.bot.latest_context
-        
+
         if not ctx or not ctx.voice_client:
             return
 
@@ -216,7 +215,7 @@ class Music(commands.Cog):
 
     def stop(self, ctx=None):
         ctx = ctx or self.bot.latest_context
-        
+
         if not ctx or not ctx.voice_client:
             return
 
@@ -229,7 +228,6 @@ class Music(commands.Cog):
 
         if not self._is_handling_change:
             asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
-
 
     # ==============================
     # ========== Commands ==========
@@ -249,13 +247,13 @@ class Music(commands.Cog):
         """
         Load a previously saved playlist given its name.
         """
-        
+
         success = await self.queue.load(name)
 
         if success and not self.is_playing:
             await self.bot.join_channel()
             self.play()
-    
+
     @commands.command(name="loop", aliases=["loopa", "snurra"])
     async def _loop(self, ctx, arg1=""):
         """
@@ -300,10 +298,10 @@ class Music(commands.Cog):
 
         if self.config.get('nightcore'):
             # If we previously played normally, we need go backward
-            seek_time = self.current_elapsed_time()/self.nightcore_time_scale()
+            seek_time = self.current_elapsed_time() / self.nightcore_time_scale()
         else:
             # And if we previously played nightcore, we need to go forward
-            seek_time = self.current_elapsed_time()*self.nightcore_time_scale()
+            seek_time = self.current_elapsed_time() * self.nightcore_time_scale()
 
         self.seek(seek_time)
 
@@ -346,19 +344,19 @@ class Music(commands.Cog):
         if not self.is_playing or len(args) == 0:
             await self.bot.join_channel()
             self.play()
-    
+
     @commands.command(name="playlists", aliases=["spellistor", 'pl'])
     async def _playlists(self, ctx):
         """
         Lists all the saved playlists.
         """
 
-        embed=Embed(title="Spellistor:", color=Color.orange())
+        embed = Embed(title="Spellistor:", color=Color.orange())
         for name, desc, songs in self.queue.get_playlists():
             noun = "låt" if len(songs) == 1 else "låtar"
             embed.add_field(name=f"**{name} ({len(songs)} {noun})**", value=f"{desc}", inline=False)
         await ctx.send(embed=embed)
-    
+
     @commands.command(name="previous", aliases=["prev"])
     async def _previous(self, ctx):
         """
@@ -381,7 +379,7 @@ class Music(commands.Cog):
             self.messages_since_last_update = 0
             if self.queue_message:
                 await self.queue_message.delete()
-        
+
             self.queue_message = await ctx.send(embed=self.make_queue_embed())
 
     @commands.command(name="remove")
@@ -399,7 +397,7 @@ class Music(commands.Cog):
                 start, end = [int(x) for x in arg.split(':')]
                 if start > end:
                     continue
-                for i in range(start, end+1):
+                for i in range(start, end + 1):
                     indexes.append(i)
             else:
                 indexes.append(int(arg))
@@ -423,7 +421,7 @@ class Music(commands.Cog):
         
         Can optionally also take a description of the queue.
         """
-        
+
         self.queue.save(name, desc)
 
     @commands.command(name="seek", aliases=["sök", "spoola"])
@@ -448,6 +446,5 @@ class Music(commands.Cog):
         """
         Stop the current song.
         """
-        
+
         self.stop()
-    
