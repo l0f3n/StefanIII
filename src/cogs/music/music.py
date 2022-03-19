@@ -30,7 +30,6 @@ class Music(commands.Cog):
         self.queue = Queue(config)
 
         self.config = config
-        self.config.add_on_update_callback(self._handle_playlist_change)
 
         self.queue_message = None
         self.queue_message_lock = asyncio.Lock()
@@ -198,9 +197,9 @@ class Music(commands.Cog):
         """
 
         if arg1 in ["sång", "låt", "stycke"]:
-            await self.config.toggle('is_looping_song')
+            self.config.toggle('is_looping_song')
         elif arg1 in ["kö", "lista"] or True:
-            await self.config.toggle('is_looping_queue')
+            self.config.toggle('is_looping_queue')
 
     @commands.command(name="move")
     async def _move(self, ctx, index):
@@ -238,7 +237,7 @@ class Music(commands.Cog):
         Toggle nightcore mode, increasing pitch and speed of music.
         """
 
-        await self.config.toggle('nightcore')
+        self.config.toggle('nightcore')
 
         if self.config.get('nightcore'):
             # If we previously played normally, we need go backward

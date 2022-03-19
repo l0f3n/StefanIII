@@ -27,15 +27,10 @@ class Config:
     }
 
     def __init__(self, path: str):
-        self.load(path)
-        self._on_update_callbacks = []
+        self.path = Path(path)
+        self.config = {}
 
-    async def _notify(self):
-        for callback in self._on_update_callbacks:
-            await callback()
-
-    def add_on_update_callback(self, callback):
-        self._on_update_callbacks.append(callback)
+        self.load(self.path)
     
     def get(self, key: str, allow_default=True):
         if key in self.config:
@@ -48,11 +43,10 @@ class Config:
             logger.warning(f"No config called '{key}' exists.")
             return None
 
-    async def set(self, key: str, value):
+    def set(self, key: str, value):
         if key in self.config:
             self.config[key] = value
             self.save()
-            await self._notify()
         else:
             logger.warning(f"Can't set config varible '{key}', it doesn't exist.")
 
@@ -67,12 +61,12 @@ class Config:
             self.config[key] = value
             self.save()
     
-    async def toggle(self, key: str):
-        await self.set(key, not self.get(key))
+    def toggle(self, key: str):
+        self.set(key, not self.get(key))
 
-    def load(self, path: str):
+    def load(self, path: Path):
         self.path = Path(path)
-        
+
         if self.path.exists():
             logger.debug(f"Found config file '{path}', using those values")
             with open(self.path, encoding="utf8") as f:
