@@ -1,16 +1,18 @@
 import asyncio
-import datetime as dt
+from typing import Optional
 
-from discord import Color, Embed, FFmpegPCMAudio
+from discord import Color, Embed
 from discord.ext import commands
 
 from log import get_logger
 from .playlist import Queue
+from .player import MusicPlayer
 
 logger = get_logger(__name__)
 
 
 class Music(commands.Cog):
+
     _FFMPEG_COMMON_OPTIONS = {
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     }
@@ -26,7 +28,6 @@ class Music(commands.Cog):
         self.bot = bot
 
         self.queue = Queue(config)
-        self.queue.add_on_update_callback(self._handle_playlist_change)
 
         self.config = config
         self.config.add_on_update_callback(self._handle_playlist_change)
@@ -36,86 +37,57 @@ class Music(commands.Cog):
 
         self.messages_since_last_update = self.config.get('queue_message_threshold')
 
-        self.is_playing = False
-        self.current_music_start_time = dt.datetime.now()
+        self._music_player: Optional[MusicPlayer] = None
 
         self._is_handling_change = False
 
-        self.current_music_paused_time = 0
-        self.current_music_paused_index = -1
-
-    # Override
+        asyncio.run_coroutine_threadsafe(Music._call_periodically(1, self._handle_playlist_change), self.bot.loop)
 
     async def cog_after_invoke(self, ctx):
         self.messages_since_last_update += 1
 
         return await super().cog_after_invoke(ctx)
 
-    # Private methods
-
     async def _handle_playlist_change(self):
-        self._is_handling_change = True
+        if self.queue_message:
+            await self.queue_message.edit(content=None, embed=self.make_queue_embed())
 
-        if not self.is_playing:
-            if self.queue.num_songs() == 1:
-                await self.bot.join_channel()
-                self.play()
+    @staticmethod
+    async def _call_periodically(interval, func):
+        """
+        Periodically call func every interval seconds.
+        """
 
-        async with self.queue_message_lock:
-            if self.messages_since_last_update >= self.config.get('queue_message_threshold'):
-                self.messages_since_last_update = 0
-
-                if self.queue_message:
-                    await self.queue_message.delete()
-
-                self.queue_message = await self.bot.latest_context.send(embed=self.make_queue_embed())
-
-            elif self.queue_message:
-                await self.queue_message.edit(content=None, embed=self.make_queue_embed())
-
-        self._is_handling_change = False
-
-    async def _update_music_time(self):
         while True:
-            await asyncio.sleep(self.config.get('music_time_update_interval'))
-
-            if not self.is_playing:
-                break
-
-            await self._handle_playlist_change()
-
-    # Public methods
+            await asyncio.sleep(interval)
+            await func()
 
     async def close(self):
         if self.queue_message:
             await self.queue_message.delete()
 
-    def current_elapsed_time(self):
-        if self.is_playing:
-            return (dt.datetime.now() - self.current_music_start_time).total_seconds()
-        else:
-            return self.current_music_paused_time
-
-    def current_ffmpeg_options(self):
+    def ffmpeg_options(self):
         if not self.config.get('nightcore'):
             return Music._FFMPEG_STANDARD_OPTIONS
         else:
+            tempo = self.config.get("nightcore_tempo")
+            pitch = self.config.get("nightcore_pitch")
             freq = self.queue.current_song()['asr']
 
             return {
                 **Music._FFMPEG_COMMON_OPTIONS,
-                'options': f'-af atempo={self.config.get("nightcore_tempo")},asetrate={freq}*{self.config.get("nightcore_pitch")} -vn'
+                'options': f'-af atempo={tempo},asetrate={freq}*{pitch} -vn'
             }
 
-    def current_time_scale(self):
+    def time_scale(self):
         return self.nightcore_time_scale() if self.config.get("nightcore") else 1
 
     def make_queue_embed(self):
         description = self.queue.playlist_string(self.config.get("title_max_length"), self.config.get("before_current"),
-                                                 self.config.get("after_current"), self.current_elapsed_time(),
-                                                 self.current_time_scale())
+                                                 self.config.get("after_current"), self.elapsed_time(),
+                                                 self.time_scale())
 
-        playing = "✓" if self.is_playing else "✗"
+        playing = "✓" if self.is_playing() else "✗"
 
         nightcore = "✓" if self.config.get("nightcore") else "✗"
 
@@ -126,7 +98,7 @@ class Music(commands.Cog):
         else:
             looping = "✓" if self.config.get("is_looping_queue") else "✗"
 
-        time = self.queue.duration(self.current_time_scale())
+        time = self.queue.duration(self.time_scale())
 
         info = f"Spelar: {playing}⠀Loopar {looped}: {looping}⠀Nightcore: {nightcore}⠀Antal låtar: {self.queue.num_songs()}⠀Längd: {time}\n"
 
@@ -139,31 +111,6 @@ class Music(commands.Cog):
         # well, so we need to multiply these.
         return self.config.get("nightcore_tempo") * self.config.get("nightcore_pitch")
 
-    def play(self, ctx=None):
-        ctx = ctx or self.bot.latest_context
-
-        if not ctx or not ctx.voice_client:
-            logger.warning("Can't play music, bot is not connected to voice")
-            return
-
-        if not ctx.voice_client.is_playing():
-            # If we are not playing we need to send a source to the voice
-            # client, otherwise the seek() will take care of it
-            source = FFmpegPCMAudio(self.queue.current_song_source(), **self.current_ffmpeg_options())
-            ctx.voice_client.play(source, after=lambda e: self.play_next(ctx, e, self.bot.loop))
-
-        if not self.is_playing:
-            self.is_playing = True
-            asyncio.run_coroutine_threadsafe(self._update_music_time(), self.bot.loop)
-
-        if self.current_music_paused_index != self.queue.get_current_index():
-            self.current_music_paused_time = 0
-
-        self.seek(self.current_music_paused_time)
-
-        if not self._is_handling_change:
-            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
-
     def play_next(self, ctx, e, loop):
         if e:
             logger.error(f"Something went wrong in play_next()", exc_info=e)
@@ -174,60 +121,43 @@ class Music(commands.Cog):
     async def play_next_async(self, ctx):
         if self.queue.get_current_index() == self.queue.num_songs() and not (
                 self.config.get("is_looping_queue") or self.config.get("is_looping_song")):
-            self.stop(ctx)
+            self.stop()
 
-        elif self.is_playing:
+        elif not self.is_stopped():
             if not self.config.get("is_looping_song"):
                 await self.queue.next()
-            self.play(ctx)
 
-    def seek(self, time):
-        if self.is_playing:
-            source = FFmpegPCMAudio(self.queue.current_song_source(), **self.current_ffmpeg_options())
+            if self._music_player:
+                self._music_player.song = self.queue.current_song()
+                self._music_player.play(force_start=False)
 
-            read_time = 0
-            while source.read() and read_time < time * 1000:
-                read_time += 20
+    # =================================================
+    # ========== Wrappers around MusicPlayer ==========
+    # =================================================
 
-            self.bot.latest_context.voice_client.source = source
-            self.current_music_start_time = dt.datetime.now() - dt.timedelta(seconds=time)
-        else:
-            self.current_music_paused_time = time
+    def is_playing(self):
+        if self._music_player:
+            return self._music_player.is_playing()
+        return False
 
-        if not self._is_handling_change:
-            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
+    def is_paused(self):
+        if self._music_player:
+            return self._music_player.is_paused()
+        return False
 
-    def pause(self, ctx=None):
-        ctx = ctx or self.bot.latest_context
+    def is_stopped(self):
+        if self._music_player:
+            return self._music_player.is_stopped()
+        return True
 
-        if not ctx or not ctx.voice_client:
-            return
+    def stop(self):
+        if self._music_player:
+            self._music_player.stop()
 
-        if ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
-
-        self.is_playing = False
-        self.current_music_paused_time = (dt.datetime.now() - self.current_music_start_time).total_seconds()
-        self.current_music_paused_index = self.queue.get_current_index()
-
-        if not self._is_handling_change:
-            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
-
-    def stop(self, ctx=None):
-        ctx = ctx or self.bot.latest_context
-
-        if not ctx or not ctx.voice_client:
-            return
-
-        if ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
-
-        self.is_playing = False
-        self.current_music_start_time = dt.datetime.now()
-        self.current_music_paused_time = 0
-
-        if not self._is_handling_change:
-            asyncio.run_coroutine_threadsafe(self._handle_playlist_change(), self.bot.loop)
+    def elapsed_time(self):
+        if self._music_player:
+            return self._music_player.elapsed_time()
+        return 0
 
     # ==============================
     # ========== Commands ==========
@@ -250,9 +180,15 @@ class Music(commands.Cog):
 
         success = await self.queue.load(name)
 
-        if success and not self.is_playing:
+        if success and not self.is_stopped():
             await self.bot.join_channel()
-            self.play()
+
+            # Will only run the first time
+            if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
+                self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), lambda x: self.play_next(ctx, x, self.bot.loop))
+
+            if self._music_player.is_stopped():
+                self._music_player.play()
 
     @commands.command(name="loop", aliases=["loopa", "snurra"])
     async def _loop(self, ctx, arg1=""):
@@ -274,7 +210,10 @@ class Music(commands.Cog):
         await self.queue.move(int(index))
 
         if self.queue.num_songs() > 0:
-            self.play()
+
+            if self._music_player:
+                self._music_player.song = self.queue.current_song()
+                self._music_player.play()
 
     @commands.command(name="next")
     async def _next(self, ctx):
@@ -284,7 +223,11 @@ class Music(commands.Cog):
 
         if not (self.queue.get_current_index() == self.queue.num_songs() and not self.config.get("is_looping_queue")):
             await self.queue.next()
-            self.play()
+
+            if self._music_player:
+                self._music_player.song = self.queue.current_song()
+                self._music_player.play()
+
         else:
             self.stop()
 
@@ -298,12 +241,14 @@ class Music(commands.Cog):
 
         if self.config.get('nightcore'):
             # If we previously played normally, we need go backward
-            seek_time = self.current_elapsed_time() / self.nightcore_time_scale()
+            seek_time = self.elapsed_time() / self.nightcore_time_scale()
         else:
             # And if we previously played nightcore, we need to go forward
-            seek_time = self.current_elapsed_time() * self.nightcore_time_scale()
+            seek_time = self.elapsed_time() * self.nightcore_time_scale()
 
-        self.seek(seek_time)
+        if self._music_player:
+            self._music_player.ffmpeg_options = self.ffmpeg_options()
+            self._music_player.seek(seek_time)
 
     @commands.command(name="pause", aliases=["pausa"])
     async def _pause(self, ctx):
@@ -311,7 +256,8 @@ class Music(commands.Cog):
         Pause the currently playing song at the current time.
         """
 
-        self.pause()
+        if self._music_player:
+            self._music_player.pause()
 
     @commands.command(name="play", aliases=["p"])
     async def _play(self, ctx, *args):
@@ -341,9 +287,14 @@ class Music(commands.Cog):
             logger.warning("Can't play music, no songs in queue")
             return
 
-        if not self.is_playing or len(args) == 0:
+        if not self.bot.get_voice_client(ctx):
             await self.bot.join_channel()
-            self.play()
+
+        if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
+            self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), lambda x: self.play_next(ctx, x, self.bot.loop))
+
+        if self._music_player.is_stopped() or len(args) == 0:
+            self._music_player.play()
 
     @commands.command(name="playlists", aliases=["spellistor", 'pl'])
     async def _playlists(self, ctx):
@@ -365,7 +316,11 @@ class Music(commands.Cog):
 
         if not (self.queue.get_current_index() == 1 and not self.config.get("is_looping_queue")):
             await self.queue.prev()
-            self.play()
+
+            if self._music_player:
+                self._music_player.song = self.queue.current_song()
+                self._music_player.play()
+
         else:
             self.stop()
 
@@ -409,7 +364,10 @@ class Music(commands.Cog):
         if self.queue.num_songs() > 0:
 
             if removed_current_song:
-                self.play()
+
+                if self._music_player:
+                    self._music_player.song = self.queue.current_song()
+                    self._music_player.play()
 
         else:
             self.stop()
@@ -430,7 +388,8 @@ class Music(commands.Cog):
         Skip to the given time in the current song.
         """
 
-        self.seek(int(time))
+        if self._music_player:
+            self._music_player.seek(int(time))
 
     @commands.command(name="shuffle", aliases=["slumpa", "skaka", "blanda", "stavmixa"])
     async def _shuffle(self, ctx):
@@ -439,7 +398,10 @@ class Music(commands.Cog):
         """
 
         await self.queue.shuffle()
-        self.play()
+
+        if self._music_player:
+            self._music_player.song = self.queue.current_song()
+            self._music_player.play()
 
     @commands.command(name="stop", aliases=["stoppa"])
     async def _stop(self, ctx):

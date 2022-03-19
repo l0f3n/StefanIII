@@ -32,6 +32,12 @@ class Stefan(commands.Bot):
 
         return await super().close()
 
+    def get_voice_client(self, ctx):
+        """
+        Return the bots voice client. May return None.
+        """
+        return discord.utils.get(self.voice_clients, guild=ctx.guild)
+
     async def join_channel(self):
         """
         Joins the users channel given the current context.
