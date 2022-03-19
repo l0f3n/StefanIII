@@ -13,19 +13,12 @@ class MusicPlayer:
         self._start_time = dt.datetime.now()
         self._pause_time = dt.datetime.now()
 
+        self._is_stopped = True
+
         self.song = song
         self.ffmpeg_options = ffmpeg_options
 
-    @property
-    def song(self):
-        return self._song
-
-    @song.setter
-    def song(self, song):
-        self._song = song
-        self._is_stopped = True
-
-    def play(self, force_start=True):
+    def play(self, force_start=True, ignore_pause=True):
 
         if self.is_playing():
             # We can simply just switch the source if we are already playing something
@@ -33,7 +26,7 @@ class MusicPlayer:
             self._start_time = dt.datetime.now()
             self._is_stopped = False
 
-        elif self.is_paused():
+        elif self.is_paused() and not ignore_pause:
             self._vc.resume()
             self._start_time = dt.datetime.now() - (self._pause_time - self._start_time)
             self._is_stopped = False

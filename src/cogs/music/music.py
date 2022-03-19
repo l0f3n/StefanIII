@@ -51,6 +51,8 @@ class Music(commands.Cog):
             func()
 
     async def close(self):
+        self.stop()
+
         if self.queue_message:
             await self.queue_message.delete()
 
@@ -99,18 +101,14 @@ class Music(commands.Cog):
         # well, so we need to multiply these.
         return self.config.get("nightcore_tempo") * self.config.get("nightcore_pitch")
 
-    def play_next(self, ctx, e, loop):
+    def play_next(self, e):
         if e:
             logger.error(f"Something went wrong in play_next()", exc_info=e)
             return
 
-        asyncio.run_coroutine_threadsafe(self.play_next_async(ctx), loop)
-
-    async def play_next_async(self, ctx):
         if self.queue.get_current_index() == self.queue.num_songs() and not (
                 self.config.get("is_looping_queue") or self.config.get("is_looping_song")):
             self.stop()
-
         elif not self.is_stopped():
             if not self.config.get("is_looping_song"):
                 self.queue.next()
@@ -169,14 +167,14 @@ class Music(commands.Cog):
 
         success = self.queue.load(name)
 
-        if success and not self.is_stopped():
+        if success:
             await self.bot.join_channel()
 
             # Will only run the first time
             if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
-                self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), lambda x: self.play_next(ctx, x, self.bot.loop))
+                self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), self.play_next)
 
-            if self._music_player.is_stopped():
+            if not self._music_player.is_playing():
                 self._music_player.play()
 
     @commands.command(name="loop", aliases=["loopa", "snurra"])
@@ -280,10 +278,10 @@ class Music(commands.Cog):
             await self.bot.join_channel()
 
         if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
-            self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), lambda x: self.play_next(ctx, x, self.bot.loop))
+            self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), self.play_next)
 
         if self._music_player.is_stopped() or len(args) == 0:
-            self._music_player.play()
+            self._music_player.play(ignore_pause=False)
 
     @commands.command(name="playlists", aliases=["spellistor", 'pl'])
     async def _playlists(self, ctx):
