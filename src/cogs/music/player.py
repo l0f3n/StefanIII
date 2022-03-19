@@ -44,7 +44,7 @@ class MusicPlayer:
 
         self._pause_time = dt.datetime.now()
 
-    def seek(self, seek_time, ctx=None):
+    def seek(self, seek_time):
 
         if not self.is_stopped():
             # When we are playing or paused we just fastforward the current song from the beginning to the desired time
@@ -56,12 +56,15 @@ class MusicPlayer:
             while source.read() and read_time < seek_time * 1000:
                 read_time += 20
 
+            was_paused = self.is_paused()
+
             self._vc.source = source
             self._start_time = dt.datetime.now() - dt.timedelta(seconds=seek_time)
 
-            if self.is_paused():
+            if was_paused:
                 # When we are paused we additionally need to change the time we paused the music, which is right now
                 self._pause_time = dt.datetime.now()
+                self._vc.pause()
 
     def stop(self):
 
