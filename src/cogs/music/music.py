@@ -26,30 +26,19 @@ class Music(commands.Cog):
         super().__init__()
 
         self.bot = bot
-
-        self.queue = Queue(config)
-
         self.config = config
 
+        self.queue = Queue(config)
         self.queue_message = None
-        self.queue_message_lock = asyncio.Lock()
-
-        self.messages_since_last_update = self.config.get('queue_message_threshold')
 
         self._music_player: Optional[MusicPlayer] = None
 
-        self._is_handling_change = False
+        asyncio.run_coroutine_threadsafe(Music._call_periodically(1, self._handle_update), self.bot.loop)
 
-        asyncio.run_coroutine_threadsafe(Music._call_periodically(1, self._handle_playlist_change), self.bot.loop)
-
-    async def cog_after_invoke(self, ctx):
-        self.messages_since_last_update += 1
-
-        return await super().cog_after_invoke(ctx)
-
-    async def _handle_playlist_change(self):
+    def _handle_update(self):
         if self.queue_message:
-            await self.queue_message.edit(content=None, embed=self.make_queue_embed())
+            asyncio.run_coroutine_threadsafe(
+                self.queue_message.edit(content=None, embed=self.make_queue_embed()), self.bot.loop)
 
     @staticmethod
     async def _call_periodically(interval, func):
@@ -59,7 +48,7 @@ class Music(commands.Cog):
 
         while True:
             await asyncio.sleep(interval)
-            await func()
+            func()
 
     async def close(self):
         if self.queue_message:
@@ -124,7 +113,7 @@ class Music(commands.Cog):
 
         elif not self.is_stopped():
             if not self.config.get("is_looping_song"):
-                await self.queue.next()
+                self.queue.next()
 
             if self._music_player:
                 self._music_player.song = self.queue.current_song()
@@ -170,7 +159,7 @@ class Music(commands.Cog):
 
         self.stop()
         self._music_player = None
-        await self.queue.clear()
+        self.queue.clear()
 
     @commands.command(name="load", aliases=["ladda"])
     async def _load(self, ctx, name):
@@ -178,7 +167,7 @@ class Music(commands.Cog):
         Load a previously saved playlist given its name.
         """
 
-        success = await self.queue.load(name)
+        success = self.queue.load(name)
 
         if success and not self.is_stopped():
             await self.bot.join_channel()
@@ -207,7 +196,7 @@ class Music(commands.Cog):
         Move to a song given its index.
         """
 
-        await self.queue.move(int(index))
+        self.queue.move(int(index))
 
         if self.queue.num_songs() > 0:
 
@@ -222,7 +211,7 @@ class Music(commands.Cog):
         """
 
         if not (self.queue.get_current_index() == self.queue.num_songs() and not self.config.get("is_looping_queue")):
-            await self.queue.next()
+            self.queue.next()
 
             if self._music_player:
                 self._music_player.song = self.queue.current_song()
@@ -274,13 +263,13 @@ class Music(commands.Cog):
         if len(args) == 1 and args[0].startswith(('http', 'www')):
             # Assume user provided url
             message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
-            await self.queue.add_song_from_url(args[0])
+            self.queue.add_song_from_url(args[0])
             await message.delete(delay=self.config.get("message_delete_delay"))
 
         elif len(args) >= 1:
             # Assume user provided a string to search for on youtube
             message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
-            await self.queue.add_song_from_query(' '.join(args))
+            self.queue.add_song_from_query(' '.join(args))
             await message.delete(delay=self.config.get("message_delete_delay"))
 
         if self.queue.num_songs() == 0:
@@ -315,7 +304,7 @@ class Music(commands.Cog):
         """
 
         if not (self.queue.get_current_index() == 1 and not self.config.get("is_looping_queue")):
-            await self.queue.prev()
+            self.queue.prev()
 
             if self._music_player:
                 self._music_player.song = self.queue.current_song()
@@ -330,12 +319,10 @@ class Music(commands.Cog):
         Shows the current queue, which will continuously update.
         """
 
-        async with self.queue_message_lock:
-            self.messages_since_last_update = 0
-            if self.queue_message:
-                await self.queue_message.delete()
+        if self.queue_message:
+            self.queue_message.delete()
 
-            self.queue_message = await ctx.send(embed=self.make_queue_embed())
+        self.queue_message = await ctx.send(embed=self.make_queue_embed())
 
     @commands.command(name="remove")
     async def _remove(self, ctx, *args):
@@ -359,7 +346,7 @@ class Music(commands.Cog):
 
         removed_current_song = self.queue.get_current_index() in indexes
 
-        await self.queue.remove(index for index in indexes if 1 <= index <= self.queue.num_songs())
+        self.queue.remove(index for index in indexes if 1 <= index <= self.queue.num_songs())
 
         if self.queue.num_songs() > 0:
 
@@ -398,7 +385,7 @@ class Music(commands.Cog):
         Shuffle the current queue.
         """
 
-        await self.queue.shuffle()
+        self.queue.shuffle()
 
         if self._music_player:
             self._music_player.song = self.queue.current_song()

@@ -36,7 +36,6 @@ class Queue:
 
         self.playlist = []
         self.current = 0
-        self._on_update_callbacks = []
 
     def _prepare_index_(self, index):
         return index+1
@@ -44,23 +43,16 @@ class Queue:
     def _unprepare_index_(self, index):
         return index-1
 
-    async def _notify(self):
-        for callback in self._on_update_callbacks:
-            await callback()
-
     def _is_spotify_url(self, url: str):
         return url.startswith("https://open.spotify.com/")
 
-    def add_on_update_callback(self, callback):
-        self._on_update_callbacks.append(callback)
-
-    async def add_song_from_url(self, url: str):
+    def add_song_from_url(self, url: str):
         if self._is_spotify_url(url):
-            await self.add_song_from_spotify_url(url)
+            self.add_song_from_spotify_url(url)
         else:
-            await self.add_song_from_youtube_url(url)
+            self.add_song_from_youtube_url(url)
     
-    async def add_song_from_youtube_url(self, url):
+    def add_song_from_youtube_url(self, url):
         YDL_OPTIONS = {
             **Queue.COMMON_YDL_OPTIONS,
         }
@@ -76,14 +68,14 @@ class Queue:
 
             if 'entries' in info:
                 for entry_info in info['entries']:
-                    await self._add_song_from_info(entry_info)
+                    self._add_song_from_info(entry_info)
             else:
-                await self._add_song_from_info(info)
+                self._add_song_from_info(info)
 
     def _spotify_query_string(self, track):
         return track['name'] + ' - ' + track['artists'][0]['name']
 
-    async def add_song_from_spotify_url(self, url: str):
+    def add_song_from_spotify_url(self, url: str):
         spotify_id = self.config.get("spotify_id", allow_default=False)
         spotify_secret = self.config.get("spotify_secret", allow_default=False)
         
@@ -101,28 +93,28 @@ class Queue:
         
         try:
             if item_type == "track":
-                await self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
+                self.add_song_from_query(self._spotify_query_string(spotify.track(item_id)))
 
             elif item_type == "playlist":
                 for track in spotify.playlist(item_id)['tracks']['items']:
-                    await self.add_song_from_query(self._spotify_query_string(track['track']))
+                    self.add_song_from_query(self._spotify_query_string(track['track']))
             
             elif item_type == "album":
                 for track in spotify.album_tracks(item_id)['tracks']['items']:
-                    await self.add_song_from_query(self._spotify_query_string(track))
+                    self.add_song_from_query(self._spotify_query_string(track))
 
         except spotipy.oauth2.SpotifyOauthError as e:
-            logger.warn("Something went wrong when using Spotify credentials", exec_info=e)
+            logger.warning("Something went wrong when using Spotify credentials", exc_info=e)
             return
 
-    async def add_song_from_query(self, query: str):
+    def add_song_from_query(self, query: str):
         
-        YDL_OPTIONS = {
+        ydl_options = {
             **Queue.COMMON_YDL_OPTIONS,
             'default_search': 'ytsearch',
         }
 
-        with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
+        with youtube_dl.YoutubeDL(ydl_options) as ydl:
             info = ydl.extract_info(query, download=False)
             
             # We don't get any info when we (probably among other things) don't
@@ -132,9 +124,9 @@ class Queue:
                 return
             
             if 'entries' in info:
-                await self._add_song_from_info(info['entries'][0])
+                self._add_song_from_info(info['entries'][0])
 
-    async def _add_song_from_info(self, info):
+    def _add_song_from_info(self, info):
 
         # If a video is unavailable in a playlist we get None as info argument.
         # So we check that and just ignore it if that is the case.
@@ -150,8 +142,6 @@ class Queue:
             "asr": info.get('asr'),
         })
 
-        await self._notify()
-
     def _sanitize_title(self, title):
         """
         Only keep letters, digits and spaces from title. Strip whitespace from
@@ -164,32 +154,27 @@ class Queue:
         
         return ' '.join(Queue.TITLE_SANITIZE_RE.sub(' ', title.replace("'", '')).split()) 
 
-    async def next(self):
+    def next(self):
         if self.playlist:
             self.current = (self.current + 1) % len(self.playlist)
-        await self._notify()
-    
-    async def prev(self):
+
+    def prev(self):
         if self.playlist:
             self.current = (self.current - 1) % len(self.playlist)
-        await self._notify()
 
-    async def move(self, index):
+    def move(self, index):
         index = self._unprepare_index_(index)
         if index < len(self.playlist):
             self.current = index
-        await self._notify()
 
-    async def shuffle(self):
+    def shuffle(self):
         random.shuffle(self.playlist)
-        await self._notify()
 
-    async def clear(self):
+    def clear(self):
         self.playlist = []
         self.current = 0
-        await self._notify()
 
-    async def remove(self, arg, notify=True):
+    def remove(self, arg):
 
         if isinstance(arg, int):
             index = self._unprepare_index_(arg)
@@ -207,10 +192,7 @@ class Queue:
             # otherwise we would remove a song before another one and its index 
             # would change causing us to remove the wrong one.
             for index in sorted(arg, reverse=True):
-                await self.remove(index, notify=False)
-
-        if notify:
-            await self._notify()
+                self.remove(index)
 
     def num_songs(self):
         return len(self.playlist)
@@ -274,7 +256,7 @@ class Queue:
         
         return True
 
-    async def load(self, name: str) -> bool:
+    def load(self, name: str) -> bool:
         if not Path(Queue.PLAYLISTS_PATH).exists():
             logger.error(f"Can't load playlists, file '{Queue.PLAYLISTS_PATH}' not found")
             return False
@@ -283,8 +265,8 @@ class Queue:
             playlists = json.loads(f.read())
 
         if name not in playlists:
-           logger.error(f"Can't load playlist '{name}', playlist not found")
-           return False
+            logger.error(f"Can't load playlist '{name}', playlist not found")
+            return False
         
         # The source link gotten from youtube-dl apparently expire after some
         # (unknown to us) time. So if we load a playlist that hasn't been
@@ -300,12 +282,11 @@ class Queue:
 
         if time_since_updated > dt.timedelta(hours=4):
             for song in playlists[name]['songs']:
-                await self.add_song_from_youtube_url(song['url'])
+                self.add_song_from_youtube_url(song['url'])
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])
-            await self._notify()
-        
+
         return True
 
     def playlist_string(self, title_max_len, before_current, after_current, current_music_time, time_scaling=1):
