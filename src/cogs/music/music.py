@@ -170,6 +170,7 @@ class Music(commands.Cog):
         """
 
         self.stop()
+        self._music_player = None
         await self.queue.clear()
 
     @commands.command(name="load", aliases=["ladda"])
@@ -371,6 +372,7 @@ class Music(commands.Cog):
 
         else:
             self.stop()
+            self._music_player = None
 
     @commands.command(name="save", aliases=["spara"])
     async def _save(self, ctx, name, desc=None):
