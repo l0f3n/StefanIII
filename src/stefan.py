@@ -27,6 +27,9 @@ class Stefan(commands.Bot):
         if self.latest_context:
             await self.latest_context.send("Jag dör! 😱")
 
+            if self.latest_context.guild.voice_client:
+                await self.latest_context.guild.voice_client.disconnect()
+
         return await super().close()
 
     async def join_channel(self):
