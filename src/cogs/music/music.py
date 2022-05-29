@@ -33,7 +33,7 @@ class Music(commands.Cog):
 
         self._music_player: Optional[MusicPlayer] = None
 
-        asyncio.run_coroutine_threadsafe(Music._call_periodically(1, self._handle_update), self.bot.loop)
+        asyncio.run_coroutine_threadsafe(Music._call_periodically(config.get("music_time_update_interval"), self._handle_update), self.bot.loop)
 
     def _handle_update(self):
         if self.queue_message:
@@ -184,7 +184,7 @@ class Music(commands.Cog):
 
         if arg1 in ["sång", "låt", "stycke"]:
             self.config.toggle('is_looping_song')
-        elif arg1 in ["kö", "lista"] or True:
+        elif arg1 in ["kö", "lista"]:
             self.config.toggle('is_looping_queue')
 
     @commands.command(name="move")
@@ -314,7 +314,7 @@ class Music(commands.Cog):
         """
 
         if self.queue_message:
-            self.queue_message.delete()
+            await self.queue_message.delete()
 
         self.queue_message = await ctx.send(embed=self.make_queue_embed())
 
