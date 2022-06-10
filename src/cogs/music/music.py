@@ -30,25 +30,48 @@ class Music(commands.Cog):
 
         self.queue = Queue(config)
         self.queue_message = None
+        self.queue_message_threshold_count = 0
 
         self._music_player: Optional[MusicPlayer] = None
 
-        asyncio.run_coroutine_threadsafe(Music._call_periodically(config.get("music_time_update_interval"), self._handle_update), self.bot.loop)
+        asyncio.run_coroutine_threadsafe(
+            Music._call_periodically(
+                config.get("music_time_update_interval"), 
+                self.queue_message_update), 
+            self.bot.loop)
 
-    def _handle_update(self):
+    async def cog_before_invoke(self, ctx):
+        if self.queue_message_threshold_count <= 1:
+            await ctx.trigger_typing()
+
+    async def cog_after_invoke(self, ctx):
+        self.queue_message_threshold_count -= 1
+        if self.queue_message_threshold_count <= 0:
+            self.queue_message_threshold_count = self.config.get('queue_message_threshold')
+            await self.queue_message_delete()
+            await self.queue_message_send()
+
+    async def queue_message_delete(self):
         if self.queue_message:
-            asyncio.run_coroutine_threadsafe(
-                self.queue_message.edit(content=None, embed=self.make_queue_embed()), self.bot.loop)
+            await self.queue_message.delete()
+
+    async def queue_message_send(self):
+        if self.bot.latest_context:
+            self.queue_message = await self.bot.latest_context.send(embed=self.make_queue_embed())
+    
+    async def queue_message_update(self):
+        if self.queue_message:
+            await self.queue_message.edit(content=None, embed=self.make_queue_embed())
 
     @staticmethod
-    async def _call_periodically(interval, func):
+    async def _call_periodically(interval, coro):
         """
-        Periodically call func every interval seconds.
+        Periodically call coro every interval seconds.
         """
 
         while True:
             await asyncio.sleep(interval)
-            func()
+            await coro()
 
     async def close(self):
         self.stop()
@@ -116,6 +139,7 @@ class Music(commands.Cog):
             if self._music_player:
                 self._music_player.play(self.queue.current_song(), force_start=False)
 
+
     # ============================
     # ===== Stefan functions =====
     # ============================
@@ -123,6 +147,7 @@ class Music(commands.Cog):
     def stefan_on_disconnect(self):
         self.stop()
         self._music_player = None
+
 
     # =================================================
     # ========== Wrappers around MusicPlayer ==========
@@ -151,6 +176,7 @@ class Music(commands.Cog):
         if self._music_player:
             return self._music_player.elapsed_time()
         return 0
+
 
     # ==============================
     # ========== Commands ==========
@@ -181,6 +207,9 @@ class Music(commands.Cog):
             if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
                 self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), self.play_next)
 
+            # TODO: This crashes if we load a playlist BUT we are not in a 
+            # voice channel, then we won't create music player and it will 
+            # be None
             if not self._music_player.is_playing():
                 self._music_player.play()
 
@@ -285,6 +314,8 @@ class Music(commands.Cog):
         if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
             self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), self.play_next)
 
+        # TODO: This crashes if we are not in a voice channel, then we won't 
+        # create music player and it will be None
         if self._music_player.is_stopped() or len(args) == 0:
             self._music_player.play(ignore_pause=False)
 
