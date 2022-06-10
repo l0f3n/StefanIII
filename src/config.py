@@ -23,7 +23,7 @@ class Config:
         "nightcore_tempo": 1.2,
         "nightcore_pitch": 1.15,
         "queue_message_threshold": 5,
-        "music_time_update_interval": 5,
+        "update_interval": 5,
     }
 
     def __init__(self, path: str):

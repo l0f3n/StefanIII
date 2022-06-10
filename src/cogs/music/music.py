@@ -36,7 +36,7 @@ class Music(commands.Cog):
 
         asyncio.run_coroutine_threadsafe(
             Music._call_periodically(
-                config.get("music_time_update_interval"), 
+                config.get("update_interval"), 
                 self.queue_message_update), 
             self.bot.loop)
 
