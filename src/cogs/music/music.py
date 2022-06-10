@@ -147,6 +147,9 @@ class Music(commands.Cog):
     def stefan_on_disconnect(self):
         self.stop()
         self._music_player = None
+        asyncio.run_coroutine_threadsafe(
+            self.queue_message_delete(), 
+            self.bot.loop)
 
 
     # =================================================
