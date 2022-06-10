@@ -18,7 +18,10 @@ class Stefan(commands.Bot):
         self.after_invoke(self._handle_after_invoke)
 
     async def _handle_before_invoke(self, ctx):
-        logger.info(f"Command: {ctx.invoked_with}, Args: {ctx.args[2:]}")
+        command = f"Command: _{ctx.command}"
+        args = ', '.join(['self', 'ctx'] + [f"'{arg}'" for arg in ctx.args[2:]])
+        logger.info(f"{command}({args}) [source: '{ctx.message.content}']")
+        
         self.latest_context = ctx
         await ctx.message.add_reaction("👌")
 
@@ -114,6 +117,7 @@ class Stefan(commands.Bot):
                 await ctx.send(f"Jag antar att du ville skriva {invokes[max_index]}? 🤔")
                 ctx.args = [commands[max_index], ctx, *args]
                 ctx.invoked_with = commands[max_index].name
+                ctx.command = commands[max_index].name
                 await self._handle_before_invoke(ctx)
                 await commands[max_index].__call__(ctx, *args)
                 await self._handle_after_invoke(ctx)
