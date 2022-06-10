@@ -47,7 +47,7 @@ class Misc(commands.Cog):
                         # If bot is alone
                         else:
                             await ctx.send("Äntligen lite sällskap igen! 😊")
-                            await ctx.guild.voice_client.disconnect()
+                            await self.bot.stefan_disconnect(ctx.guild.voice_client)
                             await ctx.author.voice.channel.connect()
                 # If user is in a channel, but bot is not
                 else:
@@ -69,7 +69,7 @@ class Misc(commands.Cog):
                 # If they are in the same channel
                 if ctx.author.voice.channel == ctx.guild.voice_client.channel:
                     await ctx.send('Okej då... 😥')
-                    await ctx.guild.voice_client.disconnect()
+                    await self.bot.stefan_disconnect(ctx.guild.voice_client)
                 # If they are in different channels
                 else:
                     # If bot has company
@@ -78,7 +78,7 @@ class Misc(commands.Cog):
                     # If bot is alone
                     else:
                         await ctx.send('Okej då... 😥')
-                        await ctx.guild.voice_client.disconnect()
+                        await self.bot.stefan_disconnect(ctx.guild.voice_client)
             # If bot is in a channel, but user is not
             else:
                 # If bot has company
@@ -87,7 +87,7 @@ class Misc(commands.Cog):
                 # If bot is alone
                 else:
                     await ctx.send('Okej då... 😥')
-                    await ctx.guild.voice_client.disconnect()
+                    await self.bot.stefan_disconnect(ctx.guild.voice_client)
         # If bot is not in a channel
         else:
             await ctx.send("Jag har redan stuckit ju! 💔")
