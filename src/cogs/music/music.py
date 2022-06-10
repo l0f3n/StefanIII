@@ -54,6 +54,7 @@ class Music(commands.Cog):
     async def queue_message_delete(self):
         if self.queue_message:
             await self.queue_message.delete()
+            self.queue_message = None
 
     async def queue_message_send(self):
         if self.bot.latest_context:
@@ -76,8 +77,7 @@ class Music(commands.Cog):
     async def close(self):
         self.stop()
 
-        if self.queue_message:
-            await self.queue_message.delete()
+        await self.queue_message_delete()
 
     def ffmpeg_options(self):
         if not self.config.get('nightcore'):
@@ -136,8 +136,7 @@ class Music(commands.Cog):
             if not self.config.get("is_looping_song"):
                 self.queue.next()
 
-            if self._music_player:
-                self._music_player.play(self.queue.current_song(), force_start=False)
+            self.play(self.queue.current_song(), force_start=False)
 
 
     # ============================
@@ -170,6 +169,10 @@ class Music(commands.Cog):
         if self._music_player:
             return self._music_player.is_stopped()
         return True
+
+    def play(self, song=None, force_start=True, ignore_pause=True):
+        if self._music_player:
+            self._music_player.play(song, force_start, ignore_pause)
 
     def stop(self):
         if self._music_player:
@@ -206,15 +209,11 @@ class Music(commands.Cog):
         if success:
             await self.bot.join_channel()
 
-            # Will only run the first time
             if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
                 self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), self.play_next)
 
-            # TODO: This crashes if we load a playlist BUT we are not in a 
-            # voice channel, then we won't create music player and it will 
-            # be None
-            if not self._music_player.is_playing():
-                self._music_player.play()
+            if not self.is_playing():
+                self.play()
 
     @commands.command(name="loop", aliases=["loopa", "snurra"])
     async def _loop(self, ctx, arg1=""):
@@ -234,11 +233,8 @@ class Music(commands.Cog):
         """
 
         self.queue.move(int(index))
-
         if self.queue.num_songs() > 0:
-
-            if self._music_player:
-                self._music_player.play(self.queue.current_song())
+            self.play(self.queue.current_song())
 
     @commands.command(name="next")
     async def _next(self, ctx):
@@ -249,8 +245,7 @@ class Music(commands.Cog):
         if not (self.queue.get_current_index() == self.queue.num_songs() and not self.config.get("is_looping_queue")):
             self.queue.next()
 
-            if self._music_player:
-                self._music_player.play(self.queue.current_song())
+            self.play(self.queue.current_song())
 
         else:
             self.stop()
@@ -317,10 +312,8 @@ class Music(commands.Cog):
         if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
             self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), self.play_next)
 
-        # TODO: This crashes if we are not in a voice channel, then we won't 
-        # create music player and it will be None
-        if self._music_player.is_stopped() or len(args) == 0:
-            self._music_player.play(ignore_pause=False)
+        if self.is_stopped() or len(args) == 0:
+            self.play(ignore_pause=False)
 
     @commands.command(name="playlists", aliases=["spellistor", 'pl'])
     async def _playlists(self, ctx):
@@ -342,9 +335,7 @@ class Music(commands.Cog):
 
         if not (self.queue.get_current_index() == 1 and not self.config.get("is_looping_queue")):
             self.queue.prev()
-
-            if self._music_player:
-                self._music_player.play(self.queue.current_song())
+            self.play(self.queue.current_song())
 
         else:
             self.stop()
@@ -387,9 +378,7 @@ class Music(commands.Cog):
         if self.queue.num_songs() > 0:
 
             if removed_current_song:
-
-                if self._music_player:
-                    self._music_player.play(self.queue.current_song())
+                self.play(self.queue.current_song())
 
         else:
             self.stop()
@@ -421,9 +410,7 @@ class Music(commands.Cog):
         """
 
         self.queue.shuffle()
-
-        if self._music_player:
-            self._music_player.play(self.queue.current_song())
+        self.play(self.queue.current_song())
 
     @commands.command(name="stop", aliases=["stoppa"])
     async def _stop(self, ctx):
