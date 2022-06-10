@@ -164,7 +164,7 @@ class Queue:
 
     def move(self, index):
         index = self._unprepare_index_(index)
-        if index < len(self.playlist):
+        if 0 <= index < len(self.playlist):
             self.current = index
 
     def shuffle(self):
