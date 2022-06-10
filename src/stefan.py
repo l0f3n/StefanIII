@@ -64,6 +64,18 @@ class Stefan(commands.Bot):
         print("Stefan anmäler sig för tjänstgöring.")
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="ert skitsnack"))
 
+    async def on_voice_state_update(self, member, before, after):
+        if before.channel != after.channel:
+            await self.handle_user_switched_channel(member, before, after)
+
+    async def handle_user_switched_channel(self, member, before, after):
+        """
+        Disconnect bot if it is left alone in a channel.
+        """
+        bot_voice_client = discord.utils.get(self.voice_clients, guild=member.guild)
+        if bot_voice_client and len(bot_voice_client.channel.members) == 1:
+            await self.stefan_disconnect(bot_voice_client)
+
     async def on_command_error(self, ctx, error):
         if isinstance(error, discord.ext.commands.CommandNotFound):
             commands = []
@@ -109,3 +121,19 @@ class Stefan(commands.Bot):
                 await ctx.send("Njae, nu har du nog skrivit något tokigt... 🤔")
         else:
             raise error    
+
+    # ============================
+    # ===== Stefan functions =====
+    # ============================
+
+    async def stefan_disconnect(self, voice_client):
+        """
+        Disconnect voice_client and notify all cogs that are interested.
+        """
+        await voice_client.disconnect()
+
+        # Notify every cog that might be interested that the bot has
+        # disconnected
+        for cog in self.cogs.values():
+            if hasattr(cog, 'stefan_on_disconnect') and callable(cog.stefan_on_disconnect):
+                cog.stefan_on_disconnect()

@@ -116,6 +116,14 @@ class Music(commands.Cog):
             if self._music_player:
                 self._music_player.play(self.queue.current_song(), force_start=False)
 
+    # ============================
+    # ===== Stefan functions =====
+    # ============================
+
+    def stefan_on_disconnect(self):
+        self.stop()
+        self._music_player = None
+
     # =================================================
     # ========== Wrappers around MusicPlayer ==========
     # =================================================
