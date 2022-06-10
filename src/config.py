@@ -65,13 +65,14 @@ class Config:
         self.set(key, not self.get(key))
 
     def load(self, path: Path):
-        self.path = Path(path)
+        self.path = path
 
         if self.path.exists():
             logger.debug(f"Found config file '{path}', using those values")
             with open(self.path, encoding="utf8") as f:
                 self.config = json.loads(f.read())
                 self._update_if_needed_()
+
         else:
             logger.debug(f"Config file '{path}' not found, using default configuration")
             self.config = Config.DEFAULT
@@ -82,18 +83,18 @@ class Config:
         my_keys = set(self.config.keys())
 
         new_keys = default_keys.difference(my_keys)
+
+        for key in new_keys:
+            logger.debug(f"Adding default value for new config variable '{key}'")
+            self.config[key] = Config.DEFAULT[key]
+        
         old_keys = my_keys.difference(default_keys)
 
+        for key in old_keys:
+            logger.debug(f"Removing config value for old config variable '{key}'")
+            del self.config[key]
+
         if new_keys or old_keys:
-
-            for key in new_keys:
-                logger.debug(f"Adding default value for config variable '{key}'")
-                self.config[key] = Config.DEFAULT[key]
-            
-            for key in old_keys:
-                logger.debug(f"Removing old config value for config variable '{key}'")
-                del self.config[key]
-
             self.save()
 
     def save(self):
