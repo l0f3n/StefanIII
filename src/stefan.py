@@ -76,7 +76,7 @@ class Stefan(commands.Bot):
         Disconnect bot if it is left alone in a channel.
         """
         bot_voice_client = discord.utils.get(self.voice_clients, guild=member.guild)
-        if bot_voice_client and len(bot_voice_client.channel.members) == 1:
+        if bot_voice_client and len(bot_voice_client.channel.voice_states.keys()) == 1:
             await self.stefan_disconnect(bot_voice_client)
 
     async def on_command_error(self, ctx, error):
