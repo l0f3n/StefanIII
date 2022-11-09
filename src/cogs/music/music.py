@@ -34,15 +34,9 @@ class Music(commands.Cog):
 
         self._music_player: Optional[MusicPlayer] = None
 
-        asyncio.run_coroutine_threadsafe(
-            Music._call_periodically(
-                config.get("update_interval"), 
-                self.queue_message_update), 
-            self.bot.loop)
-
     async def cog_before_invoke(self, ctx):
         if self.queue_message_threshold_count <= 1:
-            await ctx.trigger_typing()
+            await ctx.typing()
 
     async def cog_after_invoke(self, ctx):
         self.queue_message_threshold_count -= 1
@@ -63,16 +57,6 @@ class Music(commands.Cog):
     async def queue_message_update(self):
         if self.queue_message:
             await self.queue_message.edit(content=None, embed=self.make_queue_embed())
-
-    @staticmethod
-    async def _call_periodically(interval, coro):
-        """
-        Periodically call coro every interval seconds.
-        """
-
-        while True:
-            await asyncio.sleep(interval)
-            await coro()
 
     async def close(self):
         self.stop()

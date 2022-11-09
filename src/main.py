@@ -1,19 +1,21 @@
 import discord.errors
 
-from config import Config
+from config import config
 from log import get_logger
 from stefan import Stefan
-from cogs import Music, Misc
 
 logger = get_logger(__name__)
 
 def main():
-    config = Config('config.json')
 
     config.set_from_env_var('token', 'DISCORD_TOKEN')
     config.set_from_env_var('spotify_id', 'SPOTIFY_ID')
     config.set_from_env_var('spotify_secret', 'SPOTIFY_SECRET')
-    
+
+    prefix = config.get("prefix")
+
+    logger.info(f"Using prefix: '{prefix}'")
+
     discord_token = config.get("token", allow_default=False)
 
     if not discord_token:
@@ -21,11 +23,12 @@ def main():
         return
 
     try:
-        stefan = Stefan(command_prefix=config.get("prefix"))
-        stefan.add_cog(Music(stefan, config))
-        stefan.add_cog(Misc(stefan, config))
+        intents = discord.Intents.default()
+        intents.message_content = True
 
-        stefan.run(config.get("token"))
+        stefan = Stefan(command_prefix=prefix, intents=intents)
+
+        stefan.run(config.get("token"), log_handler=None)
     except discord.errors.LoginFailure as e:
         logger.error("Something went wrong when using discord credentials", exc_info=e)
 

@@ -1,6 +1,8 @@
 from discord import Color, Embed
 from discord.ext import commands
 
+from config import config
+
 class Misc(commands.Cog):
     
     def __init__(self, bot, config) -> None:
@@ -95,7 +97,7 @@ class Misc(commands.Cog):
     @commands.command(name = "hjälp", aliases = ["hilfe", "aidez-moi", "h"])
     async def hjälp(self, ctx):
         """ TODO: Write docstring """
-        embed=Embed(title="Mina kommandon 😎 :", color=Color.orange(), description = f"Genom att skriva \"{self.command_prefix}\" följt av ett av nedanstående kommandon kan du få mig att göra roliga saker! Lek med mig! 🥰")
+        embed=Embed(title="Mina kommandon 😎 :", color=Color.orange(), description = f"Genom att skriva \"{config.get('prefix')}\" följt av ett av nedanstående kommandon kan du få mig att göra roliga saker! Lek med mig! 🥰")
         embed.add_field(name="**stick / gå / schas / försvinn / dra**", value="Säg åt mig att lämna röstkanalen. 😥", inline=False)
         embed.add_field(name="**kom / hit / komsi komsi / älskling jag är hemma**", value="Be mig att göra dig sällskap! 😇", inline=False)
         embed.add_field(name="**prefix**", value="Ge mig ett nytt prefix som jag kan lyssna på! ☺️")

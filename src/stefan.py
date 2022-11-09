@@ -4,8 +4,10 @@ from discord.ext import commands
 
 from log import get_logger
 
-logger = get_logger(__name__)
+from config import config
+from cogs import Music, Misc
 
+logger = get_logger(__name__)
 
 class Stefan(commands.Bot):
     
@@ -20,11 +22,15 @@ class Stefan(commands.Bot):
     async def _handle_before_invoke(self, ctx):
         command = f"Command: _{ctx.command}"
         args = ', '.join(['self', 'ctx'] + [f"'{arg}'" for arg in ctx.args[2:]])
-        logger.info(f"{command}({args}) [source: '{ctx.message.content}']")
+        logger.debug(f"{command}({args}) [source: '{ctx.message.content}']")
         
         self.latest_context = ctx
         await ctx.message.add_reaction("👌")
 
+    async def setup_hook(self):
+        await self.add_cog(Music(self, config))
+        await self.add_cog(Misc(self, config))
+    
     async def _handle_after_invoke(self, ctx):
         await ctx.message.remove_reaction("👌", self.user)
         await ctx.message.add_reaction("👍")
