@@ -45,6 +45,7 @@ class Config:
 
     def set(self, key: str, value):
         if key in self.config:
+            logger.debug(f"Setting config variable '{key}' to '{value}'.")
             self.config[key] = value
             self.save()
         else:
@@ -58,8 +59,7 @@ class Config:
         """
         if not self.get(key, allow_default=False) and (value := os.getenv(env_var)):       
             logger.debug(f"Trying to set config variable '{key}' using environment variable '{env_var}'")
-            self.config[key] = value
-            self.save()
+            self.set(key, value)
     
     def toggle(self, key: str):
         self.set(key, not self.get(key))
