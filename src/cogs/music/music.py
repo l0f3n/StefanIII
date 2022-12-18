@@ -30,20 +30,15 @@ class Music(commands.Cog):
 
         self.queue = Queue(config)
         self.queue_message = None
-        self.queue_message_threshold_count = 0
 
         self._music_player: Optional[MusicPlayer] = None
 
-    async def cog_before_invoke(self, ctx):
-        if self.queue_message_threshold_count <= 1:
-            await ctx.typing()
+        asyncio.run_coroutine_threadsafe(self.periodic(), self.bot.loop)
 
-    async def cog_after_invoke(self, ctx):
-        self.queue_message_threshold_count -= 1
-        if self.queue_message_threshold_count <= 0:
-            self.queue_message_threshold_count = self.config.get('queue_message_threshold')
-            await self.queue_message_delete()
-            await self.queue_message_send()
+    async def periodic(self):
+        while True:
+            await asyncio.sleep(self.config.get("update_interval"))
+            await self.queue_message_update()
 
     async def queue_message_delete(self):
         if self.queue_message:
@@ -52,6 +47,7 @@ class Music(commands.Cog):
 
     async def queue_message_send(self):
         if self.bot.latest_context:
+            await self.bot.latest_context.typing()
             self.queue_message = await self.bot.latest_context.send(embed=self.make_queue_embed())
     
     async def queue_message_update(self):
@@ -274,8 +270,6 @@ class Music(commands.Cog):
         searches it on youtube and adds the first result to the queue.
         """
 
-        num_songs_before = self.queue.num_songs()
-
         if len(args) == 1 and args[0].startswith(('http', 'www')):
             # Assume user provided url
             message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
@@ -298,13 +292,7 @@ class Music(commands.Cog):
         if not self._music_player and (vc := self.bot.get_voice_client(ctx)):
             self._music_player = MusicPlayer(vc, self.queue.current_song(), self.ffmpeg_options(), self.play_next)
 
-        num_songs_after = self.queue.num_songs()
-
         if self.is_stopped() or len(args) == 0:
-
-            if num_songs_before != num_songs_after:
-                self.queue.move(num_songs_after)
-
             self.play(song=self.queue.current_song(), ignore_pause=False)
 
     @commands.command(name="playlists", aliases=["spellistor", 'pl'])
