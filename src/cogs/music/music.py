@@ -17,11 +17,6 @@ class Music(commands.Cog):
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     }
 
-    _FFMPEG_STANDARD_OPTIONS = {
-        **_FFMPEG_COMMON_OPTIONS,
-        'options': '-vn'
-    }
-
     def __init__(self, bot, config):
         super().__init__()
 
@@ -84,17 +79,29 @@ class Music(commands.Cog):
         await self.queue_message_delete()
 
     def ffmpeg_options(self):
-        if not self.config.get('nightcore'):
-            return Music._FFMPEG_STANDARD_OPTIONS
-        else:
+       
+        filter_options_list = []
+
+        filter_options_list.append(f'loudnorm') 
+
+        if self.config.get('nightcore'):
             tempo = self.config.get("nightcore_tempo")
             pitch = self.config.get("nightcore_pitch")
             freq = self.queue.current_song()['asr']
 
-            return {
-                **Music._FFMPEG_COMMON_OPTIONS,
-                'options': f'-af atempo={tempo},asetrate={freq}*{pitch} -vn'
-            }
+            filter_options_list.append(f'atempo={tempo}') 
+            filter_options_list.append(f'asetrate={freq}*{pitch}')
+
+        option_str = '-vn'  # No video
+
+        if filter_options_list:
+            # Include additional audio filters
+            option_str = option_str + ' -af ' + ','.join(filter_options_list)
+
+        return {
+            **Music._FFMPEG_COMMON_OPTIONS,
+            'options': option_str,
+        }
 
     def time_scale(self):
         return self.nightcore_time_scale() if self.config.get("nightcore") else 1
