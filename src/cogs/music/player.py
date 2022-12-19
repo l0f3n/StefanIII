@@ -3,6 +3,8 @@ import datetime as dt
 import discord
 from discord import FFmpegPCMAudio
 
+from .song import Song
+
 
 class MusicPlayer:
 
@@ -18,14 +20,14 @@ class MusicPlayer:
 
         self.ffmpeg_options = ffmpeg_options
 
-    def play(self, song=None, force_start=True, ignore_pause=True):
+    def play(self, song: Song = None, force_start=True, ignore_pause=True):
 
         if song:
             self._song = song
 
         if self.is_playing():
             # We can simply just switch the source if we are already playing something
-            self._vc.source = FFmpegPCMAudio(self._song['source'], **self.ffmpeg_options)
+            self._vc.source = FFmpegPCMAudio(self._song.source, **self.ffmpeg_options)
             self._start_time = dt.datetime.now()
             self._is_stopped = False
 
@@ -36,7 +38,7 @@ class MusicPlayer:
 
         elif not self.is_stopped() or (self.is_stopped() and force_start):
             # But if we are not playing we need to send a new source to the voice client
-            self._vc.play(FFmpegPCMAudio(self._song['source'], **self.ffmpeg_options), after=self._after)
+            self._vc.play(FFmpegPCMAudio(self._song.source, **self.ffmpeg_options), after=self._after)
             self._start_time = dt.datetime.now()
             self._is_stopped = False
 
@@ -56,7 +58,7 @@ class MusicPlayer:
             options = ffmpeg_options['options']
             ffmpeg_options['options'] = f"{options} -ss {seek_time}"
 
-            source = FFmpegPCMAudio(self._song['source'], **ffmpeg_options)
+            source = FFmpegPCMAudio(self._song.source, **ffmpeg_options)
 
             was_paused = self.is_paused()
 

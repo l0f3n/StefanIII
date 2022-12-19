@@ -5,7 +5,8 @@ from discord import Color, Embed
 from discord.ext import commands
 
 from log import get_logger
-from .playlist import Queue
+from .song_queue import SongQueue
+from .song import Song
 from .player import MusicPlayer
 
 logger = get_logger(__name__)
@@ -24,8 +25,9 @@ class Music(commands.Cog):
         self.config = config
         self.config.subscribe(self.on_update)
 
-        self.queue = Queue(config)
+        self.queue = SongQueue(config)
         self.queue.subscribe(self.on_update)
+        
         self.queue_message = None
         self.queue_message_threshold_count = 0
         self.queue_message_lock = asyncio.Lock()
@@ -87,7 +89,7 @@ class Music(commands.Cog):
         if self.config.get('nightcore'):
             tempo = self.config.get("nightcore_tempo")
             pitch = self.config.get("nightcore_pitch")
-            freq = self.queue.current_song()['asr']
+            freq = self.queue.current_song().sample_rate
 
             filter_options_list.append(f'atempo={tempo}') 
             filter_options_list.append(f'asetrate={freq}*{pitch}')
@@ -307,24 +309,25 @@ class Music(commands.Cog):
         if len(args) == 0 and ctx.message.attachments:
             logger.debug("Playing song(s) from attached file(s).")
             for attachment in ctx.message.attachments:
+
                 filetype = attachment.content_type.split('/')[0]
                 if filetype != "audio":
-                    await ctx.send("Jag hanterar tyvärr inte den där typen av fil")
                     continue
 
-                self.queue.add_song_from_attachment(attachment)
+                song = Song.from_source_url(attachment.url)
+                SongQueue.add_song(song)
 
         elif len(args) == 1 and args[0].startswith(('http', 'www')):
             logger.debug("Playing song from url.")
-            message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
-            self.queue.add_song_from_url(args[0])
-            await message.delete(delay=self.config.get("message_delete_delay"))
+
+            songs = Song.from_url(args[0])
+            self.queue.add_songs(songs)
 
         elif len(args) >= 1:
             logger.debug("Playing song from YouTube query.")
-            message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
-            self.queue.add_song_from_query(' '.join(args))
-            await message.delete(delay=self.config.get("message_delete_delay"))
+
+            song = Song.from_query(' '.join(args))
+            self.queue.add_song(song)
 
         if self.queue.num_songs() == 0:
             logger.warning("Can't play music, no songs in queue")
