@@ -9,6 +9,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import youtube_dl
 
 from log import get_logger
+from config import config
 
 logger = get_logger(__name__)
 
@@ -83,11 +84,14 @@ class Song:
             return Song.from_youtube_url(url)
 
     @staticmethod
-    def from_spotify_url(url: str, spotify_id: str, spotify_secret: str) -> List[Song]:
+    def from_spotify_url(url: str) -> List[Song]:
         
+        spotify_id = config.get("spotify_id", allow_default=False)
+        spotify_secret = config.get("spotify_secret", allow_default=False)
+
         if not spotify_id or not spotify_secret:
             logger.warning("Can't add song from Spotify, spotify_id or spotify_secret not set")
-            return
+            return []
 
         spotify = spotipy.Spotify(
                     auth_manager=SpotifyClientCredentials(
@@ -114,7 +118,7 @@ class Song:
 
         except spotipy.oauth2.SpotifyOauthError as e:
             logger.warning("Something went wrong when using Spotify credentials", exc_info=e)
-            return
+            return []
 
         return songs
 
