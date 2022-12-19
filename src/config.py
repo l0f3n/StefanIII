@@ -29,9 +29,17 @@ class Config:
     def __init__(self, path: str):
         self.path = Path(path)
         self.config = {}
+        self.subscribers = []
 
         self.load(self.path)
-    
+
+    def subscribe(self, callback):
+        self.subscribers.append(callback)
+
+    def publish(self):
+        for callback in self.subscribers:
+            callback()
+
     def get(self, key: str, allow_default=True):
         if key in self.config:
 
@@ -48,6 +56,7 @@ class Config:
             logger.debug(f"Setting config variable '{key}' to '{value}'.")
             self.config[key] = value
             self.save()
+            self.publish()
         else:
             logger.warning(f"Can't set config varible '{key}', it doesn't exist.")
 
@@ -77,6 +86,8 @@ class Config:
             logger.debug(f"Config file '{path}' not found, using default configuration")
             self.config = Config.DEFAULT
             self.save()
+
+        self.publish()
 
     def _update_if_needed_(self):
         default_keys = set(Config.DEFAULT.keys())

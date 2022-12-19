@@ -27,32 +27,56 @@ class Music(commands.Cog):
 
         self.bot = bot
         self.config = config
+        self.config.subscribe(self.on_update)
 
         self.queue = Queue(config)
+        self.queue.subscribe(self.on_update)
         self.queue_message = None
+        self.queue_message_threshold_count = 0
+        self.queue_message_lock = asyncio.Lock()
 
         self._music_player: Optional[MusicPlayer] = None
 
-        asyncio.run_coroutine_threadsafe(self.periodic(), self.bot.loop)
+        asyncio.create_task(self.periodic_update())
 
-    async def periodic(self):
+    async def cog_before_invoke(self, ctx):
+        if self.queue_message_threshold_count <= 1:
+            await ctx.typing()
+    
+    async def cog_after_invoke(self, ctx):
+        self.queue_message_threshold_count -= 1
+        if self.queue_message_threshold_count <= 0:
+            self.queue_message_threshold_count = self.config.get('queue_message_threshold')
+            await self.queue_message_delete()
+            await self.queue_message_send()
+
+    def on_update(self):
+        asyncio.ensure_future(self.async_on_update(), loop=self.bot.loop)
+
+    async def async_on_update(self):
+        await self.queue_message_update()
+
+    async def periodic_update(self):
         while True:
             await asyncio.sleep(self.config.get("update_interval"))
             await self.queue_message_update()
 
     async def queue_message_delete(self):
-        if self.queue_message:
-            await self.queue_message.delete()
-            self.queue_message = None
+        async with self.queue_message_lock:
+            if self.queue_message:
+                await self.queue_message.delete()
+                self.queue_message = None
 
     async def queue_message_send(self):
-        if self.bot.latest_context:
-            await self.bot.latest_context.typing()
-            self.queue_message = await self.bot.latest_context.send(embed=self.make_queue_embed())
+        async with self.queue_message_lock:
+            if self.bot.latest_context:
+                await self.bot.latest_context.typing()
+                self.queue_message = await self.bot.latest_context.send(embed=self.make_queue_embed())
     
     async def queue_message_update(self):
-        if self.queue_message:
-            await self.queue_message.edit(content=None, embed=self.make_queue_embed())
+        async with self.queue_message_lock:
+            if self.queue_message:
+                await self.queue_message.edit(content=None, embed=self.make_queue_embed())
 
     async def close(self):
         self.stop()

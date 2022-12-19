@@ -35,7 +35,25 @@ class Queue:
         self.config = config
 
         self.playlist = []
-        self.current = 0
+        self._current = 0
+
+        self.subscribers = []
+
+    def subscribe(self, callback):
+        self.subscribers.append(callback)
+
+    def publish(self):
+        for callback in self.subscribers:
+            callback()
+    
+    @property
+    def current(self):
+        return self._current
+
+    @current.setter
+    def current(self, value):
+        self._current = value
+        self.publish()
 
     def _prepare_index_(self, index):
         return index+1
@@ -63,7 +81,7 @@ class Queue:
             # We don't get any info when we (probably among other things) don't
             # have access to the specified playlist. Just ignore it then.
             if not info:
-                logger.error(f"No info found for url '{url}'")
+                logger.warning(f"No info found for url '{url}'")
                 return
 
             if 'entries' in info:
@@ -142,6 +160,8 @@ class Queue:
             "asr": info.get('asr'),
         })
 
+        self.publish()
+
     def _sanitize_title(self, title):
         """
         Only keep letters, digits and spaces from title. Strip whitespace from
@@ -212,7 +232,7 @@ class Queue:
 
     def get_playlists(self):
         if not Path(Queue.PLAYLISTS_PATH).exists():
-            logger.error(f"Can't load playlists, file '{Queue.PLAYLISTS_PATH}' not found")
+            logger.warning(f"Can't load playlists, file '{Queue.PLAYLISTS_PATH}' not found")
             return {}
 
         with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
@@ -258,14 +278,14 @@ class Queue:
 
     def load(self, name: str) -> bool:
         if not Path(Queue.PLAYLISTS_PATH).exists():
-            logger.error(f"Can't load playlists, file '{Queue.PLAYLISTS_PATH}' not found")
+            logger.warning(f"Can't load playlists, file '{Queue.PLAYLISTS_PATH}' not found")
             return False
         
         with open(Queue.PLAYLISTS_PATH, encoding="utf8") as f:
             playlists = json.loads(f.read())
 
         if name not in playlists:
-            logger.error(f"Can't load playlist '{name}', playlist not found")
+            logger.warning(f"Can't load playlist '{name}', playlist not found")
             return False
         
         # The source link gotten from youtube-dl apparently expire after some
@@ -286,6 +306,7 @@ class Queue:
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])
+            self.publish()
 
         return True
 
