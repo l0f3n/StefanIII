@@ -51,13 +51,12 @@ class MusicPlayer:
 
         if not self.is_stopped():
             # When we are playing or paused we just fastforward the current song from the beginning to the desired time
-            source = FFmpegPCMAudio(self._song['source'], **self.ffmpeg_options)
+            
+            ffmpeg_options = self.ffmpeg_options.copy()
+            options = ffmpeg_options['options']
+            ffmpeg_options['options'] = f"{options} -ss {seek_time}"
 
-            # TODO: This is really slow. Implement it by using ffmpeg instead:
-            #  https://stackoverflow.com/questions/18444194/cutting-the-videos-based-on-start-and-end-time-using-ffmpeg
-            read_time = 0
-            while source.read() and read_time < seek_time * 1000:
-                read_time += 20
+            source = FFmpegPCMAudio(self._song['source'], **ffmpeg_options)
 
             was_paused = self.is_paused()
 
