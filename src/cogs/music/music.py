@@ -109,7 +109,7 @@ class Music(commands.Cog):
         return self.nightcore_time_scale() if self.config.get("nightcore") else 1
 
     def make_queue_embed(self):
-        description = self.queue.playlist_string(self.config.get("title_max_length"), self.config.get("before_current"),
+        description = self.queue.queue_string(self.config.get("title_max_length"), self.config.get("before_current"),
                                                  self.config.get("after_current"), self.elapsed_time(),
                                                  self.time_scale())
 

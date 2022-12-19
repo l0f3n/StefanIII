@@ -2,8 +2,7 @@ import datetime as dt
 import json
 from pathlib import Path
 import random
-import re
-from typing import Iterable, List
+from typing import Iterable, List, Callable, Any, Union, Dict
 
 from utils import format_time
 
@@ -29,7 +28,7 @@ class SongQueue:
 
         self.subscribers = []
 
-    def subscribe(self, callback):
+    def subscribe(self, callback: Callable[[], Any]):
         self.subscribers.append(callback)
 
     def publish(self):
@@ -41,14 +40,14 @@ class SongQueue:
         return self._current
 
     @current.setter
-    def current(self, value):
+    def current(self, value: int):
         self._current = value
         self.publish()
 
-    def _prepare_index_(self, index):
+    def _prepare_index_(self, index: int):
         return index+1
     
-    def _unprepare_index_(self, index):
+    def _unprepare_index_(self, index: int):
         return index-1
 
     def add_songs(self, songs: List[Song]):
@@ -67,7 +66,7 @@ class SongQueue:
         if self.queue:
             self.current = (self.current - 1) % len(self.queue)
 
-    def move(self, index):
+    def move(self, index: int):
         index = self._unprepare_index_(index)
         if 0 <= index < len(self.queue):
             self.current = index
@@ -79,7 +78,7 @@ class SongQueue:
         self.queue = []
         self.current = 0
 
-    def remove(self, arg):
+    def remove(self, arg: Union[Iterable[int], int]):
 
         if isinstance(arg, int):
             index = self._unprepare_index_(arg)
@@ -99,23 +98,23 @@ class SongQueue:
             for index in sorted(arg, reverse=True):
                 self.remove(index)
 
-    def num_songs(self):
+    def num_songs(self) -> int:
         return len(self.queue)
 
-    def get_current_index(self):
+    def get_current_index(self) -> int:
         return self._prepare_index_(self.current)
 
-    def current_song_source(self):
+    def current_song_source(self) -> str:
         assert 0 <= self.current < len(self.queue), "Invalid song index"
 
         return self.queue[self.current].source
     
-    def current_song(self):
+    def current_song(self) -> Song:
         assert 0 <= self.current < len(self.queue), "Invalid song index"
 
         return self.queue[self.current]
 
-    def get_playlists(self):
+    def get_playlists(self) -> Dict:
         if not Path(SongQueue.PLAYLISTS_PATH).exists():
             logger.warning(f"Can't load playlists, file '{SongQueue.PLAYLISTS_PATH}' not found")
             return {}
@@ -123,7 +122,7 @@ class SongQueue:
         with open(SongQueue.PLAYLISTS_PATH, encoding="utf8") as f:
             return [(key, value["description"], value["songs"]) for key, value in json.loads(f.read()).items()]
 
-    def get_queue(self):
+    def get_queue(self) -> List[Song]:
         return self.queue
 
     def duration(self, time_scaling: int = 1) -> str:
@@ -202,7 +201,14 @@ class SongQueue:
 
         return True
 
-    def playlist_string(self, title_max_len, before_current, after_current, current_music_time, time_scaling=1):
+    def queue_string(self, 
+            title_max_len: int, 
+            before_current: int, 
+            after_current: int, 
+            current_music_time: float, 
+            time_scaling: float = 1,
+        ):
+
         if not self.queue:
             return ""
 

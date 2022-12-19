@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Dict, Callable
 
 import discord
 from discord import FFmpegPCMAudio
@@ -8,7 +9,7 @@ from .song import Song
 
 class MusicPlayer:
 
-    def __init__(self, voice_client: discord.VoiceClient, song, ffmpeg_options, after):
+    def __init__(self, voice_client: discord.VoiceClient, song: Song, ffmpeg_options: Dict, after: Callable):
         self._vc = voice_client
         self._song = song
         self._after = after
@@ -20,7 +21,7 @@ class MusicPlayer:
 
         self.ffmpeg_options = ffmpeg_options
 
-    def play(self, song: Song = None, force_start=True, ignore_pause=True):
+    def play(self, song: Song = None, force_start: bool = True, ignore_pause: bool = True):
 
         if song:
             self._song = song
@@ -49,7 +50,7 @@ class MusicPlayer:
 
         self._pause_time = dt.datetime.now()
 
-    def seek(self, seek_time):
+    def seek(self, seek_time: int):
 
         if not self.is_stopped():
             # When we are playing or paused we just fastforward the current song from the beginning to the desired time

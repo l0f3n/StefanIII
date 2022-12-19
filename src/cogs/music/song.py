@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 class Song:
 
     title: str
-    url: str
+    source: str
     duration: float
     sample_rate: int
 
@@ -30,7 +30,7 @@ class Song:
     # A regular expression that includes all characters EXCEPT the alphanumerics.
     TITLE_SANITIZE_RE = re.compile('[^a-zA-Z0-9åäöÅÄÖ]')
 
-    def __init__(self, title, source, duration, sample_rate):
+    def __init__(self, title: str, source: str, duration: float, sample_rate: int):
         self.title = title
         self.source = source
         self.duration = duration
@@ -45,7 +45,7 @@ class Song:
         }
 
     @staticmethod
-    def from_json(json):
+    def from_json(json) -> Song:
         title = json['title']
         source = json['source']
         duration = json['duration']
@@ -163,7 +163,7 @@ class Song:
         return Song(title, source, duration, sample_rate)
 
     @staticmethod
-    def _sanitize_title(title: str):
+    def _sanitize_title(title: str) -> str:
         """
         Only keep letters, digits and spaces from title. Strip whitespace from
         either side and turn all sequences of mulitple spaces into a single 
@@ -176,7 +176,7 @@ class Song:
         return ' '.join(Song.TITLE_SANITIZE_RE.sub(' ', title.replace("'", '')).split())
 
     @staticmethod
-    def _spotify_query_string(track):
+    def _spotify_query_string(track) -> str:
         return track['name'] + ' - ' + track['artists'][0]['name']
 
     @staticmethod
