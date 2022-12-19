@@ -9,6 +9,7 @@ import youtube_dl
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from utils import format_time
+import ffmpeg 
 
 from log import get_logger
 
@@ -63,6 +64,10 @@ class Queue:
 
     def _is_spotify_url(self, url: str):
         return url.startswith("https://open.spotify.com/")
+
+    def add_song_from_attachment(self, attachment):
+        info = ffmpeg.probe(attachment.url)
+        self._add_song_from_ffmpeg_probe(info)
 
     def add_song_from_url(self, url: str):
         if self._is_spotify_url(url):
@@ -144,6 +149,17 @@ class Queue:
             if 'entries' in info:
                 self._add_song_from_info(info['entries'][0])
 
+    def _add_song_from_ffmpeg_probe(self, info):
+        format = info['format']
+        stream = info['streams'][0]
+
+        self._add_song({  
+            "title": self._sanitize_title(Path(format['filename']).name), 
+            "source": format['filename'], 
+            "duration": float(format["duration"]),
+            "asr": stream['sample_rate'],
+        })
+
     def _add_song_from_info(self, info):
 
         # If a video is unavailable in a playlist we get None as info argument.
@@ -152,7 +168,7 @@ class Queue:
             logger.warning("Ignoring unavailable video")
             return
 
-        self.playlist.append({  
+        self._add_song({  
             "title": self._sanitize_title(info.get('title')), 
             "url": info.get('original_url'), 
             "source": info.get('url'), 
@@ -160,6 +176,8 @@ class Queue:
             "asr": info.get('asr'),
         })
 
+    def _add_song(self, song):
+        self.playlist.append(song)
         self.publish()
 
     def _sanitize_title(self, title):
@@ -302,7 +320,13 @@ class Queue:
 
         if time_since_updated > dt.timedelta(hours=4):
             for song in playlists[name]['songs']:
-                self.add_song_from_youtube_url(song['url'])
+                if (url := song.get('url')):
+                    # If it has a url, the source was from Youtube, in which
+                    # case we need to update it.
+                    self.add_song_from_youtube_url(url)
+                else:
+                    # Otherwise we can just add it normally
+                    self._add_song(song)
             self.save(name)
         else:
             self.playlist.extend(playlists[name]['songs'])

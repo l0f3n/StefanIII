@@ -287,6 +287,9 @@ class Music(commands.Cog):
         """
         Start playing music.
 
+        If there are no arguments, it will look for attachments on the 
+        message and play every audio file found. 
+
         If there is one argument that is a url it either imports a playlist 
         or video from youtube, or playlist, album or track from spotify.
 
@@ -294,14 +297,24 @@ class Music(commands.Cog):
         searches it on youtube and adds the first result to the queue.
         """
 
-        if len(args) == 1 and args[0].startswith(('http', 'www')):
-            # Assume user provided url
+        if len(args) == 0 and ctx.message.attachments:
+            logger.debug("Playing song(s) from attached file(s).")
+            for attachment in ctx.message.attachments:
+                filetype = attachment.content_type.split('/')[0]
+                if filetype != "audio":
+                    await ctx.send("Jag hanterar tyvärr inte den där typen av fil")
+                    continue
+
+                self.queue.add_song_from_attachment(attachment)
+
+        elif len(args) == 1 and args[0].startswith(('http', 'www')):
+            logger.debug("Playing song from url.")
             message = await ctx.send("Schysst förslag! Det fixar jag! 🤩")
             self.queue.add_song_from_url(args[0])
             await message.delete(delay=self.config.get("message_delete_delay"))
 
         elif len(args) >= 1:
-            # Assume user provided a string to search for on youtube
+            logger.debug("Playing song from YouTube query.")
             message = await ctx.send("Jag ska se vad jag kan skaka fram. 🤔")
             self.queue.add_song_from_query(' '.join(args))
             await message.delete(delay=self.config.get("message_delete_delay"))
