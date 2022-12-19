@@ -355,6 +355,8 @@ class Music(commands.Cog):
 
         self.queue_message = await ctx.send(embed=self.make_queue_embed())
 
+        self.queue_message_threshold_count = self.config.get('queue_message_threshold')
+
     @commands.command(name="remove")
     async def _remove(self, ctx, *args):
         """
